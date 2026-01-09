@@ -1,0 +1,78 @@
+# ------------------------------------------------
+# OS & System Files
+# ------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ------------------------------------------------
+# Python / FastAPI Backend
+# ------------------------------------------------
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Distribution / Packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Environment Variables (Keep secrets safe!)
+.env
+.env.local
+
+# Pytest / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ------------------------------------------------
+# Frontend / Web
+# ------------------------------------------------
+# Even if you use vanilla JS, you might install tools later
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.sass-cache/
+
+# ------------------------------------------------
+# IDE & Editors
+# ------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ------------------------------------------------
+# Project Specific (Git Visualizer)
+# ------------------------------------------------
+# Ignore the specific folder where you clone user repos
+backend/cache/*
+
+# ...But keep the folder itself so the code doesn't crash
+!backend/cache/.gitkeep
+
+# Ignore any generated JSON data dumps if you save them to disk
+*.json
+!package.json
+!tsconfig.json
+# (Add specific exceptions if you have config json files you DO want to keep)
+
+# Logs
+*.log
+backend/logs/
