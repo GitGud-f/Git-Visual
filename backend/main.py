@@ -1,10 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from repo_analyzer import GitAnalyzer
-import pydriller
+import uvicorn
 
-app = FastAPI()
-
+app = FastAPI(
+    title="Git Visual Evolution API",
+    description="Backend for analyzing GitHub repositories for D3 visualization.",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,25 +19,25 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"status": "API is running. Use /analyze?url=... to fetch data."}
+    return {"status": "online", "message": "Access /analyze?url=<github_url> to start."}
 
 @app.get("/analyze")
 def analyze_repo(url: str):
     """
-    Endpoint: /analyze?url=https://github.com/username/repo
+    Main endpoint to trigger analysis.
+    
+    - **url**: Full HTTPS URL of the git repository.
     """
-    if not url:
-        raise HTTPException(status_code=400, detail="URL is required")
+    if not url or "github.com" not in url:
+        raise HTTPException(status_code=400, detail="Invalid GitHub URL provided.")
 
     try:
-        analyzer = GitAnalyzer(url)
+        analyzer = GitAnalyzer(url, history_limit=2000)
         data = analyzer.analyze()
         return data
     except Exception as e:
-        print(e)
+        print(f"INTERNAL SERVER ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    import uvicorn
-    # Run on localhost:8000
     uvicorn.run(app, host="0.0.0.0", port=8000)
