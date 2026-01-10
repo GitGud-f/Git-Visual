@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git Visual Evolution</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="lib/d3.v7.min.js"></script>
+</head>
+<body>
+
+    <div class="dashboard-grid">
+        <header class="header">
+            <div class="logo">
+                <h1>Git<span class="highlight">Visual</span></h1>
+            </div>
+            <div class="controls">
+                <input type="text" id="repoUrl" placeholder="https://github.com/username/repo" value="https://github.com/GitGud-f/ParallelStemmer">
+                <button id="btnAnalyze">Visualize Repository</button>
+            </div>
+            <div id="loading" class="hidden">Processing... (this may take a minute)</div>
+        </header>
+
+        <section class="view-sunburst card">
+            <div class="card-header">
+                <h2>File System Hierarchy</h2>
+                <div class="stats">
+                    <span id="totalFiles">0 Files</span> | 
+                    <span id="totalLoc">0 LoC</span>
+                </div>
+            </div>
+            <div id="sunburst-container"></div>
+            <div id="tooltip" class="tooltip hidden"></div>
+        </section>
+
+        <!-- 3. View B & C: Temporal Analysis (Placeholders) -->
+        <section class="view-temporal card">
+            <div class="card-header">
+                <h2>Timeline & Activity</h2>
+            </div>
+            <div id="temporal-container">
+                <p class="placeholder-text">Load a repository to see activity streams.</p>
+            </div>
+        </section>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

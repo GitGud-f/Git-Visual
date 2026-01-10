@@ -1,0 +1,130 @@
+:root {
+    --bg-dark: #1e1e2e;
+    --bg-card: #252538;
+    --text-main: #e0e0e0;
+    --text-muted: #a0a0b0;
+    --accent: #7b61ff;
+    --border: #36364e;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    margin: 0;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: var(--font-family);
+    height: 100vh;
+    overflow: hidden; 
+}
+
+/* Dashboard Layout */
+.dashboard-grid {
+    display: grid;
+    grid-template-rows: 60px 1fr 250px; 
+    grid-template-areas: 
+        "header"
+        "sunburst"
+        "temporal";
+    height: 100%;
+    gap: 10px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* Header */
+.header {
+    grid-area: header;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    padding: 0 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.controls input {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+    width: 300px;
+}
+
+.controls button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.controls button:hover {
+    background: #6a51e0;
+}
+
+.controls button:disabled {
+    background: #555;
+    cursor: not-allowed;
+}
+
+.hidden { display: none; }
+
+/* General Card Styling */
+.card {
+    background: var(--bg-card);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+}
+
+.card-header h2 { margin: 0; font-size: 1.1rem; }
+.stats { color: var(--text-muted); font-size: 0.9rem; }
+
+/* View Specifics */
+.view-temporal { grid-area: temporal; }
+
+.view-sunburst { 
+    grid-area: sunburst; 
+    overflow: hidden; 
+    display: flex;             
+    flex-direction: column;    
+}
+
+#sunburst-container {
+    flex-grow: 1;              
+    min-height: 0;             
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;        
+}
+
+/* Tooltip */
+.tooltip {
+    position: absolute;
+    background: rgba(20, 20, 30, 0.95);
+    color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    pointer-events: none; 
+    font-size: 12px;
+    border: 1px solid var(--accent);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    z-index: 1000;
+}
