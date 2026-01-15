@@ -1,0 +1,59 @@
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    padding: 0 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+}
+
+.controls input {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+    width: 300px;
+    outline: none;
+}
+
+.controls input:focus {
+    border-color: var(--accent);
+}
+
+.controls button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.controls button:hover {
+    background: var(--accent-hover);
+}
+
+.controls button:disabled {
+    background: #555;
+    cursor: not-allowed;
+}
+
+#loading {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-style: italic;
+}

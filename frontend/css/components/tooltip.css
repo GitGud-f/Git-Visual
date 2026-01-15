@@ -1,0 +1,17 @@
+.tooltip {
+    position: absolute;
+    background: rgba(20, 20, 30, 0.95);
+    color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 12px;
+    border: 1px solid var(--accent);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    z-index: 1000;
+    line-height: 1.4;
+}
+
+.tooltip strong {
+    color: var(--accent);
+}

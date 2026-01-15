@@ -1,0 +1,17 @@
+.dashboard-grid {
+    display: grid;
+    grid-template-rows: 60px 1fr 250px;
+    grid-template-areas: 
+        "header"
+        "sunburst"
+        "temporal";
+    height: 100%;
+    gap: 10px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* Area Assignments */
+.header { grid-area: header; }
+.view-sunburst { grid-area: sunburst; }
+.view-temporal { grid-area: temporal; }
