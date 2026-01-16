@@ -5,21 +5,21 @@ export class Streamgraph {
         this.container = container;
         
         // Clear placeholder text if it exists
-        this.container.innerHTML = "";
+       // this.container.innerHTML = "";
 
         // Dimensions
-        this.margin = { top: 20, right: 30, bottom: 30, left: 30 };
-        this.width = container.clientWidth - this.margin.left - this.margin.right;
-        this.height = 300 - this.margin.top - this.margin.bottom; // Fixed height for the panel
-
+        //this.margin = { top: 20, right: 30, bottom: 30, left: 30 };
+        this.width = container.clientWidth || 800;
+        this.height = container.clientHeight || 600;
         // SVG Setup
         this.svg = d3.select(container)
             .append("svg")
             .attr("class", "svg")
-            .attr("width", "100%")
-            .attr("height", this.height + this.margin.top + this.margin.bottom)
-            .append("g")
-            .attr("transform", `translate(${this.margin.left},${this.margin.top})`);
+            .attr("width", this.width)
+            .attr("height", this.height)
+            .attr("viewBox", [0, 0, this.width, this.height])
+            .append("g");
+            
 
         // Scales
         this.x = d3.scaleTime().range([0, this.width]);
@@ -91,11 +91,11 @@ export class Streamgraph {
         // Update Axis
         this.xAxisGroup.transition().duration(1000).call(d3.axisBottom(this.x));
 
-        this.svg.selectAll(".axis").remove();
+       // this.svg.selectAll(".axis").remove();
         this.svg.append("g")
             .attr("class", "axis")
             // Move it down by half the height because the group is centered
-            .attr("transform", `translate(0, ${this.height / 2})`) 
+            .attr("transform", `translate(0, ${this.height })`)
             .call(d3.axisBottom(this.x));
     }
 
