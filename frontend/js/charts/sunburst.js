@@ -2,7 +2,7 @@ import eventBus from '../eventBus.js';
 
 /**
  * @class SunburstChart
- * Renders a zoomable/interactive sunburst chart representing the file system.
+ * Renders a interactive sunburst chart representing the file system.
  * Implements the Enter/Update/Exit pattern.
  */
 export class SunburstChart {
@@ -13,7 +13,7 @@ export class SunburstChart {
      */
     constructor(container) {
         this.container = container;
-        this.width = container.clientWidth || 600; 
+        this.width = container.clientWidth || 600;
         this.height = container.clientHeight || 600;
         this.radius = Math.min(this.width, this.height) / 2;
 
@@ -70,33 +70,33 @@ export class SunburstChart {
             });
 
         paths.join(
-             // ENTER: Create new elements (fade in)
+            // ENTER: Create new elements (fade in)
             enter => enter.append("path")
                 .attr("display", d => d.depth ? null : "none")
-                .attr("d", this.arc) 
+                .attr("d", this.arc)
                 .style("fill", d => this.getFileColor(d, topExtensions))
                 .style("opacity", 0)
-                .each(function(d) { this._current = d; }) 
+                .each(function (d) { this._current = d; })
                 .call(enter => enter.transition().duration(750).style("opacity", 1)),
 
             // UPDATE: Transition existing elements (interpolate angles)
             update => update
                 .style("fill", d => this.getFileColor(d, topExtensions))
                 .call(update => update.transition().duration(750)
-                    .attrTween("d", (d, i, nodes) => this.arcTween(d, nodes[i])) 
+                    .attrTween("d", (d, i, nodes) => this.arcTween(d, nodes[i]))
                 ),
-            
+
             // EXIT: Remove deleted elements (fade out)
             exit => exit.transition().duration(750)
                 .style("opacity", 0)
                 .remove()
         )
-        .on("mouseover", (e, d) => {
-            this.handleMouseOver(e, d);
-            eventBus.call("hoverFile", this, d.data);
-        })
-        .on("mousemove", (e) => this.handleMouseMove(e))
-        .on("mouseout", () => this.handleMouseOut());
+            .on("mouseover", (e, d) => {
+                this.handleMouseOver(e, d);
+                eventBus.call("hoverFile", this, d.data);
+            })
+            .on("mousemove", (e) => this.handleMouseMove(e))
+            .on("mouseout", (e, d) => this.handleMouseOut(e, d));
 
         this.renderLegend(sortedExtensions, topExtensions);
     }
@@ -110,7 +110,7 @@ export class SunburstChart {
         this.legendContainer.classed("hidden", false).html(""); // Clear existing
 
         let legendData = allExtensions.slice(0, 12);
-        
+
         const otherCount = allExtensions.slice(12).reduce((sum, current) => sum + current[1], 0);
         if (otherCount > 0) {
             if (!legendData.find(d => d[0] === "other")) {
@@ -123,7 +123,7 @@ export class SunburstChart {
             .enter()
             .append("div")
             .attr("class", "legend-item")
-            .attr("data-ext", d => d[0]); 
+            .attr("data-ext", d => d[0]);
 
         items.append("div")
             .attr("class", "legend-color")
@@ -135,7 +135,7 @@ export class SunburstChart {
 
         items.on("mouseover", (e, d) => {
             const ext = d[0];
-            
+
             this.legendContainer.selectAll(".legend-item")
                 .classed("dimmed", true)
                 .classed("active", false);
@@ -148,22 +148,22 @@ export class SunburstChart {
                 .transition().duration(200)
                 .style("opacity", node => {
 
-                    if(node.depth === 0) return 0; 
-                    if(node.children) return 0.1; 
-                    
+                    if (node.depth === 0) return 0;
+                    if (node.children) return 0.1;
+
                     const nodeExt = this.normalizeExtension(node.data.extension, topExtensions);
-                    return nodeExt === ext ? 1 : 0.1; 
+                    return nodeExt === ext ? 1 : 0.1;
                 });
         })
-        .on("mouseout", () => {
-            this.legendContainer.selectAll(".legend-item")
-                .classed("dimmed", false)
-                .classed("active", false);
+            .on("mouseout", () => {
+                this.legendContainer.selectAll(".legend-item")
+                    .classed("dimmed", false)
+                    .classed("active", false);
 
-            this.svg.selectAll("path")
-                .transition().duration(200)
-                .style("opacity", 1);
-        });
+                this.svg.selectAll("path")
+                    .transition().duration(200)
+                    .style("opacity", 1);
+            });
     }
 
     normalizeExtension(ext, topExtensions) {
@@ -190,11 +190,11 @@ export class SunburstChart {
      */
     arcTween(newDatapoint, element) {
         const previous = element._current || newDatapoint;
-        
+
         const interpolate = d3.interpolate(previous, newDatapoint);
-        
+
         element._current = interpolate(0);
-        
+
         return t => this.arc(interpolate(t));
     }
 
@@ -203,14 +203,14 @@ export class SunburstChart {
      * @param {Event} event - The mouse event.
      * @param {d3.HierarchyRectangularNode} d - The data point.
      */
-handleMouseOver(event, d) {
+    handleMouseOver(event, d) {
         const target = d3.select(event.currentTarget);
-        
+
         target.style("opacity", 0.8);
 
         const total = d.ancestors()[d.ancestors().length - 1].value;
         const percent = total > 0 ? ((d.value / total) * 100).toFixed(1) : 0;
-        
+
         this.tooltip.classed("hidden", false)
             .html(`
                 <strong>${d.data.name}</strong><br>
@@ -224,8 +224,8 @@ handleMouseOver(event, d) {
             const ext = this.normalizeExtension(d.data.extension, currentDomain);
 
             this.legendContainer.selectAll(".legend-item")
-                .classed("dimmed", item => item[0] !== ext) 
-                .classed("active", item => item[0] === ext); 
+                .classed("dimmed", item => item[0] !== ext)
+                .classed("active", item => item[0] === ext);
         }
 
         eventBus.call("hoverFile", this, d.data);
@@ -235,15 +235,17 @@ handleMouseOver(event, d) {
     handleMouseMove(event) {
         this.tooltip
             .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY + 15) + "px"); 
+            .style("top", (event.pageY + 15) + "px");
     }
 
-handleMouseOut(event, d) {
+    handleMouseOut(event, d) {
         this.tooltip.classed("hidden", true);
-        
+
         // Reset Chart Opacity
-        d3.select(event.currentTarget).style("opacity", 1);
-        
+        if (event && event.currentTarget) {
+            d3.select(event.currentTarget).style("opacity", 1);
+        }
+
         // Reset Legend Opacity
         this.legendContainer.selectAll(".legend-item")
             .classed("dimmed", false)
