@@ -27,6 +27,16 @@ function init() {
     eventBus.on("hoverFile", (data) => {
         console.log("User hovering:", data.name);
     });
+
+    eventBus.on("selectAuthor", (authorName) => {
+         if (authorName) {
+            console.log(`Focusing on work by: ${authorName}`);
+            // Future: sunburstChart.highlightFilesByAuthor(authorName);
+        } else {
+            console.log("Cleared author selection");
+            // Future: sunburstChart.resetHighlight();
+        }
+    });
 }
 
 /**
