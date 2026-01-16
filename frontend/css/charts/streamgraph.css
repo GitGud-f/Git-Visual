@@ -1,0 +1,23 @@
+#temporal-container {
+    width: 100%;
+    min-height: 320px; /* Ensure space for the SVG */
+    position: relative;
+    overflow: hidden;
+    padding-bottom: 20px;
+    flex-grow: 1;              
+    min-height: 0;             
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.layer {
+    stroke: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.layer:hover {
+    stroke: var(--text-color);
+    stroke-width: 0.5px;
+}

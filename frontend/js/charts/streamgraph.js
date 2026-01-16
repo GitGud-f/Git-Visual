@@ -15,6 +15,7 @@ export class Streamgraph {
         // SVG Setup
         this.svg = d3.select(container)
             .append("svg")
+            .attr("class", "svg")
             .attr("width", "100%")
             .attr("height", this.height + this.margin.top + this.margin.bottom)
             .append("g")
@@ -33,21 +34,23 @@ export class Streamgraph {
             .y1(d => this.y(d[1]));
 
         this.stack = d3.stack()
-            .offset(d3.stackOffsetSilhouette); // Centers the stream
+            .offset(d3.stackOffsetSilhouette)
+            .order(d3.stackOrderNone);
+           // .offset(d3.stackOffsetSilhouette); // Centers the stream
 
         // Tooltip (reusing the global one or creating a local one)
         this.tooltip = d3.select("#tooltip");
 
         // Axis groups
         this.xAxisGroup = this.svg.append("g")
-            .attr("transform", `translate(0,${this.height})`);
+            .attr("class", "axis axis--x");
+            //.attr("transform", `translate(0,${this.height})`);
     }
 
     update(chartData) {
         if (!chartData || chartData.data.length === 0) return;
 
         const { data, keys } = chartData;
-
         // Update Domains
         this.x.domain(d3.extent(data, d => d.date));
         this.color.domain(keys);
@@ -87,6 +90,13 @@ export class Streamgraph {
 
         // Update Axis
         this.xAxisGroup.transition().duration(1000).call(d3.axisBottom(this.x));
+
+        this.svg.selectAll(".axis").remove();
+        this.svg.append("g")
+            .attr("class", "axis")
+            // Move it down by half the height because the group is centered
+            .attr("transform", `translate(0, ${this.height / 2})`) 
+            .call(d3.axisBottom(this.x));
     }
 
     handleHover(event, d) {
