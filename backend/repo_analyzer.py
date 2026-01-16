@@ -62,6 +62,27 @@ class GitAnalyzer:
             print(f"Init: Cloning {self.repo_name}...")
             Repo.clone_from(self.repo_url, self.local_path)
 
+    def _get_file_authors(self) -> Dict[str, set]:
+        """
+        Helper: Maps file paths to a set of authors who touched them.
+        Returns: Dict[filepath, Set[authors]]
+        """
+        file_authors = {}
+        repo = Repository(self.local_path, order='reverse')
+        
+        count = 0
+        for commit in repo.traverse_commits():
+            if count > self.history_limit: break
+            
+            for modified_file in commit.modified_files:
+                if modified_file.new_path: 
+                    path = modified_file.new_path.replace("\\", "/") 
+                    if path not in file_authors:
+                        file_authors[path] = set()
+                    file_authors[path].add(commit.author.name)
+            count += 1
+        return file_authors
+    
     def get_file_structure(self) -> Dict[str, Any]:
         """
         Recursively walks the directory to build a hierarchy suitable for 
@@ -78,6 +99,9 @@ class GitAnalyzer:
         Returns:
             Dict[str, Any]: The root node of the file tree.
         """
+        print(f"[{self.repo_name}] Mapping authors to files...")
+        file_author_map = self._get_file_authors()
+        
         def path_to_dict(path: str) -> Optional[Dict[str, Any]]:
             """
             Recursively builds a dict representing file structure.
@@ -92,6 +116,8 @@ class GitAnalyzer:
             if name in IGNORED_FOLDERS:
                 return None
 
+            rel_path = os.path.relpath(path, self.local_path).replace("\\", "/")
+            
             d = {'name': name}
             
             if os.path.isdir(path):
@@ -100,6 +126,7 @@ class GitAnalyzer:
                 # Filter out None values (like .git)
                 d['children'] = [c for c in children if c is not None]
                 d['type'] = 'folder'
+                
             else:
                 try:
                     with open(path, 'r', encoding='utf-8', errors='replace') as f:
@@ -108,10 +135,14 @@ class GitAnalyzer:
                     _, ext = os.path.splitext(name)
                     d['extension'] = ext.lower()
                     d['type'] = 'file'
+                    d['authors'] = list(file_author_map.get(rel_path, [])) 
                     
                 except Exception:
                     d['value'] = 0 
                     d['type'] = 'binary'
+                    
+                    d['authors'] = []
+                    
             return d
         
         print(f"[{self.repo_name}] Analyzing file structure...")
