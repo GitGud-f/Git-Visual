@@ -1,5 +1,6 @@
 import { SunburstChart } from './charts/sunburst.js';
 import eventBus  from './eventBus.js';
+import { Streamgraph } from './charts/streamgraph.js';
 import { DataProcessor } from './dataProcessor.js';
 
 // Configuration
@@ -7,12 +8,14 @@ const API_BASE = "http://localhost:8000";
 
 // State Holders
 let sunburstChart;
+let streamChart;
 
 // DOM Elements
 const btnAnalyze = document.getElementById("btnAnalyze");
 const inputUrl = document.getElementById("repoUrl");
 const loadingIndicator = document.getElementById("loading");
 const sunburstContainer = document.getElementById("sunburst-container");
+const temporalContainer = document.getElementById("temporal-container");
 
 
 /**
@@ -21,6 +24,7 @@ const sunburstContainer = document.getElementById("sunburst-container");
  */
 function init() {
     sunburstChart = new SunburstChart(sunburstContainer);
+    streamChart = new Streamgraph(temporalContainer);
 
     btnAnalyze.addEventListener("click", handleAnalyze);
 
@@ -82,6 +86,10 @@ function updateDashboard(data) {
         const totalLoc = hierarchyData.value.toLocaleString();
         document.getElementById("totalFiles").innerText = `Repository: ${data.meta.repo_name}`;
         document.getElementById("totalLoc").innerText = `${totalLoc} LoC`;
+    }
+    if (data.history) {
+        const streamData = DataProcessor.processCommitsByAuthor(data.history);
+        streamChart.update(streamData);
     }
 }
 
