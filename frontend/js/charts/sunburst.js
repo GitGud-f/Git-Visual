@@ -29,16 +29,18 @@ export class SunburstChart {
             .append("div")
             .attr("class", "sunburst-legend hidden");
 
-        this.partition = d3.partition()
-            .size([2 * Math.PI, this.radius]);
+        this.partition = d3.partition();
+
+        this.x = d3.scaleLinear().range([0, 2 * Math.PI]);
+        this.y = d3.scaleSqrt().range([0, this.radius]);
 
         this.arc = d3.arc()
-            .startAngle(d => d.x0)
-            .endAngle(d => d.x1)
-            .padAngle(0.005)
-            .padRadius(this.radius / 2)
-            .innerRadius(d => d.y0)
-            .outerRadius(d => d.y1 - 1);
+            .startAngle(d => Math.max(0, Math.min(2 * Math.PI, this.x(d.x0))))
+            .endAngle(d => Math.max(0, Math.min(2 * Math.PI, this.x(d.x1))))
+            .innerRadius(d => Math.max(0, this.y(d.y0)))
+            .outerRadius(d => Math.max(0, this.y(d.y1)));
+
+
 
         this.color = d3.scaleOrdinal(d3.schemeTableau10);
         this.tooltip = d3.select("#tooltip");
@@ -52,6 +54,11 @@ export class SunburstChart {
      */
     update(root) {
         if (!root) return;
+
+        this.x.domain([0, 1]);
+        this.y.domain([0, 1]).range([0, this.radius]);
+
+        this.focus = root; 
 
         const leaves = root.leaves();
         const extensionCounts = d3.rollup(leaves, v => v.length, d => d.data.extension || "other");
@@ -72,15 +79,18 @@ export class SunburstChart {
         paths.join(
             // ENTER: Create new elements (fade in)
             enter => enter.append("path")
-                .attr("display", d => d.depth ? null : "none")
                 .attr("d", this.arc)
-                .style("fill", d => this.getFileColor(d, topExtensions))
+                .style("stroke", "#1e1e2e")        // Matches your --bg-dark
+                .style("stroke-width", "1px")
+                .style("fill", d => d.depth === 0 ? "rgba(255,255,255,0.1)" : this.getFileColor(d, topExtensions))
+                .style("cursor", "pointer")
                 .style("opacity", 0)
                 .each(function (d) { this._current = d; })
                 .call(enter => enter.transition().duration(750).style("opacity", 1)),
 
             // UPDATE: Transition existing elements (interpolate angles)
             update => update
+                .style("stroke", "#1e1e2e") 
                 .style("fill", d => this.getFileColor(d, topExtensions))
                 .call(update => update.transition().duration(750)
                     .attrTween("d", (d, i, nodes) => this.arcTween(d, nodes[i]))
@@ -96,7 +106,8 @@ export class SunburstChart {
                 eventBus.call("hoverFile", this, d.data);
             })
             .on("mousemove", (e) => this.handleMouseMove(e))
-            .on("mouseout", (e, d) => this.handleMouseOut(e, d));
+            .on("mouseout", (e, d) => this.handleMouseOut(e, d))
+            .on("click", (e, d) => this.clickToZoom(d));
 
         this.renderLegend(sortedExtensions, topExtensions);
     }
@@ -177,6 +188,7 @@ export class SunburstChart {
      * @returns {string} - The color string.
      */
     getFileColor(d, topExtensions) {
+        if (d.depth === 0) return "rgba(255,255,255,0.1)";
         if (d.children) return "#4a4a5e"; // Folders
         const ext = this.normalizeExtension(d.data.extension, topExtensions);
         return this.color(ext);
@@ -250,5 +262,25 @@ export class SunburstChart {
         this.legendContainer.selectAll(".legend-item")
             .classed("dimmed", false)
             .classed("active", false);
+    }
+    clickToZoom(p) {
+        const target = (this.focus === p) ? (p.parent || p) : p;
+
+        this.focus = target;
+
+        this.svg.transition()
+            .duration(750)
+            .tween("scale", () => {
+                const xd = d3.interpolate(this.x.domain(), [target.x0, target.x1]);
+            
+                const yd = d3.interpolate(this.y.domain(), [target.y0, 1]);
+                const yr = d3.interpolate(this.y.range(), [target.y0 ? 20 : 0, this.radius]);
+                return t => {
+                    this.x.domain(xd(t));
+                    this.y.domain(yd(t)).range(yr(t));
+                };
+            })
+            .selectAll("path")
+            .attrTween("d", (d) => () => this.arc(d));
     }
 }
