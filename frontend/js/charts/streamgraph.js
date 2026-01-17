@@ -1,25 +1,23 @@
 import eventBus from '../eventBus.js';
 
 export class Streamgraph {
-    constructor(container) {
+    constructor(container, legendContainer) {
         this.container = container;
+        this.legendContainer = d3.select(legendContainer);
         
-        // Clear placeholder text if it exists
-       // this.container.innerHTML = "";
-
         // Dimensions
-        //this.margin = { top: 20, right: 30, bottom: 30, left: 30 };
-        this.width = container.clientWidth || 800;
-        this.height = container.clientHeight || 600;
+        // We use clientWidth/Height of the new flex child
+        this.width = container.clientWidth;
+        this.height = container.clientHeight;
+
         // SVG Setup
         this.svg = d3.select(container)
             .append("svg")
-            .attr("class", "svg")
-            .attr("width", this.width)
-            .attr("height", this.height)
+            .attr("width", "100%")
+            .attr("height", "100%")
             .attr("viewBox", [0, 0, this.width, this.height])
+            .attr("preserveAspectRatio", "none") // Allow stretching in flex
             .append("g");
-            
 
         // Scales
         this.x = d3.scaleTime().range([0, this.width]);
@@ -28,7 +26,7 @@ export class Streamgraph {
 
         // Generators
         this.area = d3.area()
-            .curve(d3.curveBasis) // Smooth curves
+            .curve(d3.curveBasis)
             .x(d => this.x(d.data.date))
             .y0(d => this.y(d[0]))
             .y1(d => this.y(d[1]));
@@ -36,36 +34,38 @@ export class Streamgraph {
         this.stack = d3.stack()
             .offset(d3.stackOffsetSilhouette)
             .order(d3.stackOrderNone);
-           // .offset(d3.stackOffsetSilhouette); // Centers the stream
 
-        // Tooltip (reusing the global one or creating a local one)
         this.tooltip = d3.select("#tooltip");
 
-        // Axis groups
+        // Axis
         this.xAxisGroup = this.svg.append("g")
-            .attr("class", "axis axis--x");
-            //.attr("transform", `translate(0,${this.height})`);
+            .attr("class", "axis axis--x")
+            .attr("transform", `translate(0,${this.height})`);
     }
 
     update(chartData) {
-        if (!chartData || chartData.data.length === 0) return;
+        if (!chartData || chartData.data.length === 0) {
+            this.container.innerHTML = "<div class='placeholder-text'>No history data available</div>";
+            return;
+        }
 
         const { data, keys } = chartData;
-        // Update Domains
+
+        // 1. Update Domains
         this.x.domain(d3.extent(data, d => d.date));
         this.color.domain(keys);
 
-        // Create Stack
+        // 2. Stack Data
         this.stack.keys(keys);
         const layers = this.stack(data);
 
-        // Update Y Domain based on the stacked layers
+        // 3. Update Y Scale
         this.y.domain([
             d3.min(layers, layer => d3.min(layer, d => d[0])),
             d3.max(layers, layer => d3.max(layer, d => d[1]))
         ]);
 
-        // Render Layers
+        // 4. Render Areas
         const paths = this.svg.selectAll(".layer")
             .data(layers, d => d.key);
 
@@ -80,49 +80,65 @@ export class Streamgraph {
             update => update
                 .call(update => update.transition().duration(1000)
                     .attr("d", this.area)
-                    .style("fill", d => this.color(d.key))), // Update color in case keys shift
-
-            exit => exit.remove()
+                    .style("fill", d => this.color(d.key)))
         )
-        .on("mouseover", (e, d) => this.handleHover(e, d))
-        .on("mousemove", (e) => this.handleMove(e))
-        .on("mouseout", () => this.handleOut());
+        .on("mouseover", (e, d) => this.highlightAuthor(d.key))
+        .on("mouseout", () => this.resetHighlight());
 
-        // Update Axis
-        this.xAxisGroup.transition().duration(1000).call(d3.axisBottom(this.x));
+        // 5. Render Axis
+        this.xAxisGroup.transition().duration(1000).call(d3.axisBottom(this.x).ticks(5));
 
-       // this.svg.selectAll(".axis").remove();
-        this.svg.append("g")
-            .attr("class", "axis")
-            // Move it down by half the height because the group is centered
-            .attr("transform", `translate(0, ${this.height })`)
-            .call(d3.axisBottom(this.x));
+        // 6. Render Legend
+        this.renderLegend(keys);
     }
 
-    handleHover(event, d) {
-        // 1. DIM OTHER LAYERS
-        d3.selectAll(".layer").style("opacity", 0.4);
-        d3.select(event.currentTarget).style("opacity", 1);
+    renderLegend(keys) {
+        this.legendContainer.html(""); // Clear previous
 
-        // 2. SHOW TOOLTIP
-        const authorName = d.key;
-        this.tooltip.classed("hidden", false)
-            .html(`<strong>Author:</strong> ${authorName}`);
+        // The data processor has already sorted top 10 and added "Others"
+        // We just iterate what is given.
+        
+        const items = this.legendContainer.selectAll(".stream-legend-item")
+            .data(keys)
+            .enter()
+            .append("div")
+            .attr("class", "stream-legend-item")
+            .on("mouseover", (e, d) => this.highlightAuthor(d))
+            .on("mouseout", () => this.resetHighlight());
 
-        // 3. BROADCAST EVENT (The Missing Piece)
-        // We tell the rest of the app: "User selected this author"
+        items.append("div")
+            .attr("class", "stream-legend-color")
+            .style("background-color", d => this.color(d));
+
+        items.append("div")
+            .attr("class", "stream-legend-name")
+            .text(d => d)
+            .attr("title", d => d); // Tooltip for truncated names
+    }
+
+    highlightAuthor(authorName) {
+        // Highlight Graph Layers
+        this.svg.selectAll(".layer")
+            .transition().duration(200)
+            .style("opacity", d => d.key === authorName ? 1 : 0.2);
+
+        // Highlight Legend Items
+        this.legendContainer.selectAll(".stream-legend-item")
+            .classed("active", d => d === authorName)
+            .classed("dimmed", d => d !== authorName);
+
+        // Broadcast
         eventBus.call("selectAuthor", this, authorName);
     }
 
-    handleMove(event) {
-        this.tooltip
-            .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY + 15) + "px");
-    }
+    resetHighlight() {
+        this.svg.selectAll(".layer")
+            .transition().duration(200)
+            .style("opacity", 0.9);
 
-    handleOut() {
-        d3.selectAll(".layer").style("opacity", 0.9);
-        this.tooltip.classed("hidden", true);
+        this.legendContainer.selectAll(".stream-legend-item")
+            .classed("active", false)
+            .classed("dimmed", false);
 
         eventBus.call("selectAuthor", this, null);
     }

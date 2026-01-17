@@ -15,7 +15,8 @@ const btnAnalyze = document.getElementById("btnAnalyze");
 const inputUrl = document.getElementById("repoUrl");
 const loadingIndicator = document.getElementById("loading");
 const sunburstContainer = document.getElementById("sunburst-container");
-const temporalContainer = document.getElementById("temporal-container");
+const streamContainer = document.getElementById("stream-chart-container");
+const streamLegendContainer = document.getElementById("stream-legend-container");
 
 
 /**
@@ -24,7 +25,7 @@ const temporalContainer = document.getElementById("temporal-container");
  */
 function init() {
     sunburstChart = new SunburstChart(sunburstContainer);
-    streamChart = new Streamgraph(temporalContainer);
+    streamChart = new Streamgraph(streamContainer, streamLegendContainer);
 
     btnAnalyze.addEventListener("click", handleAnalyze);
 

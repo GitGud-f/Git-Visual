@@ -1,23 +1,70 @@
+/* ... existing code ... */
 .view-streamgraph {
     overflow: hidden;
 }
 
-#temporal-container {
-    flex-grow: 1;              
-    min-height: 0;             
+/* Updated Container for Flex layout */
+.temporal-body {
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
     position: relative;
 }
 
-.layer {
-    stroke: none;
-    cursor: pointer;
-    transition: opacity 0.2s ease;
+/* The Chart takes available space */
+#stream-chart-container {
+    flex-grow: 1;              
+    min-width: 0; /* Critical for flex child to shrink */
+    position: relative;
 }
 
-.layer:hover {
-    stroke: var(--text-color);
-    stroke-width: 0.5px;
+/* The Legend takes fixed space on the right */
+#stream-legend-container {
+    width: 180px;
+    min-width: 180px;
+    border-left: 1px solid var(--border);
+    padding: 10px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    background: rgba(0,0,0,0.1);
+}
+
+/* Legend Items */
+.stream-legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.stream-legend-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.stream-legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.stream-legend-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+}
+
+.stream-legend-item.active .stream-legend-name {
+    color: var(--text-main);
+    font-weight: bold;
+}
+
+.stream-legend-item.dimmed {
+    opacity: 0.3;
 }
