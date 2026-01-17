@@ -1,25 +1,55 @@
 import eventBus from '../eventBus.js';
 
+/**
+ * @class Streamgraph Chart Class
+ * Renders a streamgraph visualization of contributions over time.
+ */
 export class Streamgraph {
+    /**
+     * 
+     * @param {*} container 
+     * @param {*} legendContainer 
+     * Initializes the Streamgraph chart within the given container.
+     */
     constructor(container, legendContainer) {
         this.container = container;
-        this.legendContainer = d3.select(legendContainer);
+        this.legendContainer = d3.select(legendContainer).attr("class", "hidden");
         
-        // Dimensions
-        // We use clientWidth/Height of the new flex child
-        this.width = container.clientWidth;
-        this.height = container.clientHeight;
+        // 1. Define Margins
+        // Increased 'bottom' to 60px to accommodate rotated text
+        this.margin = { top: 20, right: 20, bottom: 60, left: 30 };
 
-        // SVG Setup
+        // 2. Get Total Dimensions
+        const totalWidth = container.clientWidth;
+        const totalHeight = container.clientHeight;
+
+        // 3. Calculate Inner Drawing Dimensions
+        this.width = totalWidth - this.margin.left - this.margin.right;
+        this.height = totalHeight - this.margin.top - this.margin.bottom;
+
+        // 4. Setup SVG with Group Transform
+        // We use selectAll("svg").join... pattern to ensure we don't duplicate on re-init
+        d3.select(container).selectAll("svg").remove();
+
         this.svg = d3.select(container)
             .append("svg")
             .attr("width", "100%")
             .attr("height", "100%")
-            .attr("viewBox", [0, 0, this.width, this.height])
-            .attr("preserveAspectRatio", "none") // Allow stretching in flex
-            .append("g");
+            .attr("viewBox", [0, 0, totalWidth, totalHeight]) 
+            .attr("preserveAspectRatio", "none")
+            .append("g")
+            .attr("transform", `translate(${this.margin.left},${this.margin.top})`);
 
-        // Scales
+        // 5. Create Groups for Layering
+        // Layers go first (background)
+        this.layerGroup = this.svg.append("g").attr("class", "layers");
+        
+        // Axis goes second (foreground)
+        this.xAxisGroup = this.svg.append("g")
+            .attr("class", "axis axis--x")
+            .attr("transform", `translate(0,${this.height})`);
+
+        // 6. Scales
         this.x = d3.scaleTime().range([0, this.width]);
         this.y = d3.scaleLinear().range([this.height, 0]);
         this.color = d3.scaleOrdinal(d3.schemeTableau10);
@@ -34,13 +64,6 @@ export class Streamgraph {
         this.stack = d3.stack()
             .offset(d3.stackOffsetSilhouette)
             .order(d3.stackOrderNone);
-
-        this.tooltip = d3.select("#tooltip");
-
-        // Axis
-        this.xAxisGroup = this.svg.append("g")
-            .attr("class", "axis axis--x")
-            .attr("transform", `translate(0,${this.height})`);
     }
 
     update(chartData) {
@@ -51,52 +74,69 @@ export class Streamgraph {
 
         const { data, keys } = chartData;
 
-        // 1. Update Domains
+        // Update Domains
         this.x.domain(d3.extent(data, d => d.date));
         this.color.domain(keys);
 
-        // 2. Stack Data
+        // Stack Data
         this.stack.keys(keys);
         const layers = this.stack(data);
 
-        // 3. Update Y Scale
+        // Update Y Domain
         this.y.domain([
             d3.min(layers, layer => d3.min(layer, d => d[0])),
             d3.max(layers, layer => d3.max(layer, d => d[1]))
         ]);
 
-        // 4. Render Areas
-        const paths = this.svg.selectAll(".layer")
-            .data(layers, d => d.key);
-
-        paths.join(
-            enter => enter.append("path")
-                .attr("class", "layer")
-                .style("fill", d => this.color(d.key))
-                .style("opacity", 0)
-                .attr("d", this.area)
-                .call(enter => enter.transition().duration(1000).style("opacity", 0.9)),
-            
-            update => update
-                .call(update => update.transition().duration(1000)
+        // Render Layers
+        this.layerGroup.selectAll(".layer")
+            .data(layers, d => d.key)
+            .join(
+                enter => enter.append("path")
+                    .attr("class", "layer")
+                    .style("fill", d => this.color(d.key))
+                    .style("opacity", 0)
                     .attr("d", this.area)
-                    .style("fill", d => this.color(d.key)))
-        )
-        .on("mouseover", (e, d) => this.highlightAuthor(d.key))
-        .on("mouseout", () => this.resetHighlight());
+                    .call(enter => enter.transition().duration(1000).style("opacity", 0.9)),
+                
+                update => update
+                    .call(update => update.transition().duration(1000)
+                        .attr("d", this.area)
+                        .style("fill", d => this.color(d.key)))
+            )
+            .on("mouseover", (e, d) => this.highlightAuthor(d.key))
+            .on("mouseout", () => this.resetHighlight());
 
-        // 5. Render Axis
-        this.xAxisGroup.transition().duration(1000).call(d3.axisBottom(this.x).ticks(5));
+        // 7. Render Axis (Every Week)
+        const axis = d3.axisBottom(this.x)
+            .ticks(d3.timeWeek.every(1)) // <--- Force every 1 week
+            .tickFormat(d3.timeFormat("%b %d"))
+            .tickSizeOuter(0);
 
-        // 6. Render Legend
+        // Call axis and styling immediately
+        this.xAxisGroup
+            .call(axis);
+
+        // Style the text elements 
+        this.xAxisGroup.selectAll("text")
+            .style("fill", "#a0a0b0")
+            .style("font-size", "10px")
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", ".15em")
+            .attr("transform", "rotate(-45)"); // <--- Rotate text
+            
+        // Remove the solid axis line
+        this.xAxisGroup.select(".domain");
+        this.xAxisGroup.selectAll(".tick line").style("stroke", "#ffffff");
+
         this.renderLegend(keys);
     }
-
+    
+    // ... renderLegend, highlightAuthor, resetHighlight (Keep existing code) ...
     renderLegend(keys) {
-        this.legendContainer.html(""); // Clear previous
-
-        // The data processor has already sorted top 10 and added "Others"
-        // We just iterate what is given.
+        this.legendContainer.html(""); 
+        this.legendContainer.classed("hidden", false);
         
         const items = this.legendContainer.selectAll(".stream-legend-item")
             .data(keys)
@@ -113,26 +153,23 @@ export class Streamgraph {
         items.append("div")
             .attr("class", "stream-legend-name")
             .text(d => d)
-            .attr("title", d => d); // Tooltip for truncated names
+            .attr("title", d => d);
     }
 
     highlightAuthor(authorName) {
-        // Highlight Graph Layers
-        this.svg.selectAll(".layer")
+        this.layerGroup.selectAll(".layer")
             .transition().duration(200)
             .style("opacity", d => d.key === authorName ? 1 : 0.2);
 
-        // Highlight Legend Items
         this.legendContainer.selectAll(".stream-legend-item")
             .classed("active", d => d === authorName)
             .classed("dimmed", d => d !== authorName);
 
-        // Broadcast
         eventBus.call("selectAuthor", this, authorName);
     }
 
     resetHighlight() {
-        this.svg.selectAll(".layer")
+        this.layerGroup.selectAll(".layer")
             .transition().duration(200)
             .style("opacity", 0.9);
 

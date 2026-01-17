@@ -1,6 +1,6 @@
 .dashboard-grid {
     display: grid;
-    grid-template-rows: 60px 1fr 250px;
+    grid-template-rows: 60px 1fr 0.8fr;
     grid-template-areas: 
         "header"
         "sunburst"
