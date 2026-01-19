@@ -1,5 +1,6 @@
 .view-temporal {
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Updated Container for Flex layout */
@@ -15,6 +16,7 @@
 #stream-chart-container {
     flex-grow: 1;              
     min-width: 0; /* Critical for flex child to shrink */
+    height: 100%;
     position: relative;
 }
 
@@ -27,6 +29,7 @@
     overflow-y: auto;
     font-size: 0.85rem;
     background: rgba(0,0,0,0.1);
+    max-height: 100%;
 }
 
 /* Legend Items */
@@ -66,4 +69,16 @@
 
 .stream-legend-item.dimmed {
     opacity: 0.3;
+}
+.brush .selection {
+    fill: #777;
+    fill-opacity: 0.3;
+    stroke: #fff;
+    stroke-width: 1px;
+    shape-rendering: crispEdges;
+}
+
+.brush .handle {
+    fill: #eee;
+    width: 4px;
 }
