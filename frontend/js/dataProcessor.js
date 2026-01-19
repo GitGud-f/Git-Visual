@@ -4,7 +4,7 @@
  */
 
 export class DataProcessor {
-    
+
     /**
      * Converts a recursive file tree object into a D3 Hierarchy.
      * Calculates the sum of Lines of Code (value) for directories.
@@ -19,6 +19,28 @@ export class DataProcessor {
         const root = d3.hierarchy(fileTree)
             .sum(d => d.value ? d.value : 0) // Sum file sizes up to folder level
             .sort((a, b) => b.value - a.value); // Sort sectors by size
+
+
+        root.eachAfter(node => {
+            const authorSet = new Set();
+
+            // If it's a file, start with its own authors (from backend)
+            if (node.data.authors) {
+                node.data.authors.forEach(a => authorSet.add(a));
+            }
+
+            // Add authors from all children (folders/files)
+            if (node.children) {
+                node.children.forEach(child => {
+                    if (child.authors) {
+                        child.authors.forEach(a => authorSet.add(a));
+                    }
+                });
+            }
+
+            // Attach the unique list of authors to this hierarchy node
+            node.authors = Array.from(authorSet);
+        });
 
         return root;
     }
@@ -47,16 +69,16 @@ export class DataProcessor {
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10)
             .map(d => d[0]);
-        
+
         const otherLabel = "Others";
-        
+
         // 3. Bucket by Week
         // We create a map where keys are "Week Start Date"
         const commitsByWeek = d3.group(cleanHistory, d => d3.timeWeek(d.dateObj));
 
         const processedData = Array.from(commitsByWeek, ([date, commits]) => {
             const row = { date: date };
-            
+
             // Initialize top authors to 0
             topAuthors.forEach(a => row[a] = 0);
             row[otherLabel] = 0;
@@ -97,7 +119,7 @@ export class DataProcessor {
             author: d.author,
             msg: d.msg,
             // Impact is insertions + deletions, provided by backend
-            impact: d.impact, 
+            impact: d.impact,
             dateObj: new Date(d.date) // or parseDate(d.date) if format changes
         })).sort((a, b) => a.dateObj - b.dateObj);
     }

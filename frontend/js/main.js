@@ -1,7 +1,7 @@
 import { SunburstChart } from './charts/sunburst.js';
-import eventBus  from './eventBus.js';
+import eventBus from './eventBus.js';
 import { Streamgraph } from './charts/streamgraph.js';
-import { Scatterplot } from './charts/scatterplot.js'; 
+import { Scatterplot } from './charts/scatterplot.js';
 import { DataProcessor } from './dataProcessor.js';
 
 // Configuration
@@ -39,7 +39,7 @@ function init() {
         console.log("User hovering:", data.name);
     });
 
-    eventBus.on("selectAuthor", function(authorName) {
+    eventBus.on("selectAuthor", function (authorName) {
         const source = this; // 'this' is the chart instance that triggered the event
 
         // If an author is selected (Hover ON)
@@ -56,11 +56,16 @@ function init() {
             if (source !== scatterChart) {
                 scatterChart.highlightAuthor(authorName, false);
             }
-        } 
+
+            if (sunburstChart) {
+                sunburstChart.highlightAuthor(authorName);
+            }
+        }
         // If selection is cleared (Hover OFF)
         else {
+            sunburstChart.resetHighlight()
             console.log("Cleared author selection");
-            
+
             if (source !== streamChart) {
                 streamChart.resetHighlight(false);
             }
@@ -77,7 +82,7 @@ function init() {
  */
 async function handleAnalyze() {
     const url = inputUrl.value;
-    if(!url) return alert("Please enter a URL");
+    if (!url) return alert("Please enter a URL");
 
     setLoading(true);
 
@@ -93,26 +98,26 @@ async function handleAnalyze() {
 
         let data = await response.json();
         updateDashboard(data);
-        
+
         let currentHash = data.history[0].hash;
 
         const pollForUpdates = async () => {
             try {
                 console.log("Checking for updates...");
-                
+
                 const checkResponse = await fetch(`${API_BASE}/check_update?url=${encodeURIComponent(url)}&last_commit_hash=${currentHash}`);
-                
-                const checkStatus = await checkResponse.json(); 
+
+                const checkStatus = await checkResponse.json();
 
                 if (checkStatus.has_update) {
                     console.log("Update detected! Re-analyzing...");
-                    
+
                     const analyzeResponse = await fetch(`${API_BASE}/analyze?url=${encodeURIComponent(url)}`);
                     const newData = await analyzeResponse.json();
-                    
+
                     updateDashboard(newData);
                     currentHash = newData.history[0].hash;
-                    
+
                     showNotification("New commit detected! Dashboard updated.");
                 } else {
                     console.log("No updates.");
@@ -139,11 +144,10 @@ async function handleAnalyze() {
  * @param {Object} data - The complete JSON payload from backend.
  */
 function updateDashboard(data) {
-    if (data.file_tree) {
+    if (data.file_tree && data.history) {
         const hierarchyData = DataProcessor.processHierarchy(data.file_tree);
-
         sunburstChart.update(hierarchyData);
-        
+
         const totalLoc = hierarchyData.value.toLocaleString();
         document.getElementById("totalFiles").innerText = `Repository: ${data.meta.repo_name}`;
         document.getElementById("totalLoc").innerText = `${totalLoc} LoC`;
@@ -162,7 +166,7 @@ function updateDashboard(data) {
  * @param {boolean} isLoading 
  */
 function setLoading(isLoading) {
-    if(isLoading) {
+    if (isLoading) {
         loadingIndicator.classList.remove("hidden");
         btnAnalyze.disabled = true;
         btnAnalyze.innerText = "Analyzing...";
@@ -175,7 +179,7 @@ function setLoading(isLoading) {
 
 function showNotification(msg) {
     const toast = document.createElement("div");
-    toast.className = "toast"; 
+    toast.className = "toast";
     toast.innerText = msg;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);

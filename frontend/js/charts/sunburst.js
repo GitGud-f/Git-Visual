@@ -193,7 +193,7 @@ export class SunburstChart {
         if (!ext || !this.currentTopExtensions.includes(ext)) {
             return "other";
         }
-        return ext; 
+        return ext;
     }
 
     /**
@@ -264,8 +264,8 @@ export class SunburstChart {
             const extToHighlight = this.normalizeExtension(d.data.extension);
 
             this.legendContainer.selectAll(".legend-item")
-            .classed("dimmed", item => item[0] !== extToHighlight)
-            .classed("active", item => item[0] === extToHighlight);
+                .classed("dimmed", item => item[0] !== extToHighlight)
+                .classed("active", item => item[0] === extToHighlight);
         }
 
         eventBus.call("hoverFile", this, d.data);
@@ -310,5 +310,31 @@ export class SunburstChart {
             })
             .selectAll("path")
             .attrTween("d", (d) => () => this.arc(d));
+    }
+
+    highlightAuthor(authorName) {
+        if (!authorName) {
+            this.resetHighlight();
+            return;
+        }
+
+        this.svg.selectAll("path")
+            .transition().duration(200)
+            .style("opacity", d => {
+                // Check if the author exists in this node's aggregated authors list
+                const isRelated = d.authors && d.authors.includes(authorName);
+                return isRelated ? 1 : 0.1;
+            })
+            .style("stroke", d => {
+                const isRelated = d.authors && d.authors.includes(authorName);
+                return isRelated ? "#fff" : "#1e1e2e";
+            });
+    }
+
+    resetHighlight() {
+        this.svg.selectAll("path")
+            .transition().duration(200)
+            .style("opacity", 1)
+            .style("stroke", "#1e1e2e");
     }
 }
