@@ -45,7 +45,16 @@ export class Scatterplot {
             .map(d => d[0]);
         this.color.domain(topAuthors);
 
-        this.xAxisGroup.call(d3.axisBottom(this.x).ticks(5).tickSizeOuter(0));
+
+        
+
+        this.xAxisGroup.call(d3.axisBottom(this.x)
+            .ticks(d3.timeWeek.every(1)) 
+            .tickFormat(d3.timeFormat("%b %d"))
+            .tickSizeOuter(0));
+        this.xAxisGroup.selectAll("text").attr("dx", "-1em")
+            .attr("dy", ".9em")
+            .attr("transform", "rotate(-45)");
         this.yAxisGroup.call(d3.axisLeft(this.y).ticks(5));
 
         this.svg.selectAll(".domain, .tick line").style("stroke", "#36364e");

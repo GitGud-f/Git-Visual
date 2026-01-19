@@ -109,7 +109,7 @@ export class Streamgraph {
 
         // 7. Render Axis (Every Week)
         const axis = d3.axisBottom(this.x)
-            .ticks(d3.timeWeek.every(1)) // <--- Force every 1 week
+            .ticks(d3.timeWeek.every(1)) 
             .tickFormat(d3.timeFormat("%b %d"))
             .tickSizeOuter(0);
 
