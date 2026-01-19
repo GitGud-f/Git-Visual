@@ -63,9 +63,15 @@ export class SunburstChart {
 
 
         const sortedExtensions = Array.from(extensionCounts).sort((a, b) => b[1] - a[1]);
+
+
+        const currentExtensions = sortedExtensions.map(d => d[0]);
+        const existingDomain = this.color.domain();
+        const newExtensions = currentExtensions.filter(ext => !existingDomain.includes(ext));
+        this.color.domain([...existingDomain, ...newExtensions]);
         const topExtensions = sortedExtensions.slice(0, 12).map(d => d[0]);
 
-        this.color.domain(topExtensions);
+        this.currentTopExtensions = topExtensions;
 
         root = this.partition(root);
 
@@ -80,7 +86,7 @@ export class SunburstChart {
                 .attr("d", this.arc)
                 .style("stroke", "#1e1e2e")
                 .style("stroke-width", "1px")
-                .style("fill", d => this.getFileColor(d, this.color.domain()))
+                .style("fill", d => this.getFileColor(d))
                 .style("cursor", "pointer")
                 .style("opacity", 0)
                 // Cache the initial state for future transitions
@@ -98,7 +104,7 @@ export class SunburstChart {
                     .attrTween("d", (d, i, nodes) => this.arcTween(d, nodes[i]))
                 )
                 // Update colors in case a folder became a file or vice versa
-                .style("fill", d => this.getFileColor(d, this.color.domain())),
+                .style("fill", d => this.getFileColor(d)),
 
             exit => exit.transition().duration(750)
                 .style("opacity", 0)
@@ -168,7 +174,7 @@ export class SunburstChart {
                     if (node.depth === 0) return 0;
                     if (node.children) return 0.1;
 
-                    const nodeExt = this.normalizeExtension(node.data.extension, topExtensions);
+                    const nodeExt = this.normalizeExtension(node.data.extension);
                     return nodeExt === ext ? 1 : 0.1;
                 });
         })
@@ -183,9 +189,11 @@ export class SunburstChart {
             });
     }
 
-    normalizeExtension(ext, topExtensions) {
-        if (!ext) return "other";
-        return topExtensions.includes(ext) ? ext : "other";
+    normalizeExtension(ext) {
+        if (!ext || !this.currentTopExtensions.includes(ext)) {
+            return "other";
+        }
+        return ext; 
     }
 
     /**
@@ -193,10 +201,11 @@ export class SunburstChart {
      * @param {d3.HierarchyRectangularNode} d - The data point.
      * @returns {string} - The color string.
      */
-    getFileColor(d, topExtensions) {
+    getFileColor(d) {
         if (d.depth === 0) return "rgba(255,255,255,0.1)";
         if (d.children) return "#4a4a5e"; // Folders
-        const ext = this.normalizeExtension(d.data.extension, topExtensions);
+        const ext = this.normalizeExtension(d.data.extension);
+        if (ext === "other") return "#7f8c8d";
         return this.color(ext);
     }
 
@@ -251,13 +260,12 @@ export class SunburstChart {
                 Share: ${percent}%
             `);
 
-        if (!d.children && d.data.extension) {
-            const currentDomain = this.color.domain();
-            const ext = this.normalizeExtension(d.data.extension, currentDomain);
+        if (!d.children) {
+            const extToHighlight = this.normalizeExtension(d.data.extension);
 
             this.legendContainer.selectAll(".legend-item")
-                .classed("dimmed", item => item[0] !== ext)
-                .classed("active", item => item[0] === ext);
+            .classed("dimmed", item => item[0] !== extToHighlight)
+            .classed("active", item => item[0] === extToHighlight);
         }
 
         eventBus.call("hoverFile", this, d.data);
