@@ -23,7 +23,7 @@ export class SunburstChart {
             .attr("height", this.height)
             .attr("viewBox", [0, 0, this.width, this.height])
             .append("g")
-            .attr("transform", `translate(${this.width / 2},${this.height / 2})`);
+            .attr("transform", `translate(${this.width / 2 - 50},${this.height / 2})`);
 
         this.legendContainer = d3.select(container)
             .append("div")
