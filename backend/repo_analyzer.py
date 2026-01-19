@@ -3,6 +3,7 @@ Module to analyze Git repositories: clone/pull, extract file structure and commi
 """
 
 import os
+import subprocess
 import shutil
 from typing import Dict, List, Any, Optional
 from git import Repo, GitCommandError
@@ -115,6 +116,9 @@ class GitAnalyzer:
             
             if name in IGNORED_FOLDERS:
                 return None
+            
+            if os.path.islink(path):
+                return None 
 
             rel_path = os.path.relpath(path, self.local_path).replace("\\", "/")
             
@@ -123,7 +127,6 @@ class GitAnalyzer:
             if os.path.isdir(path):
 
                 children = [path_to_dict(os.path.join(path, x)) for x in os.listdir(path)]
-                # Filter out None values (like .git)
                 d['children'] = [c for c in children if c is not None]
                 d['type'] = 'folder'
                 
@@ -202,3 +205,37 @@ class GitAnalyzer:
             "file_tree": self.get_file_structure(),
             "history": self.get_commit_history()
         }
+    
+    def check_for_updates(self, last_commit_hash: str) -> bool:
+        """
+        Checks if there are new commits in the remote repository since the last analysis.
+        By comparing the latest commit hash with the provided one.
+
+        Args: 
+            last_commit_hash (str): The hash of the last commit from previous analysis.
+        Returns:
+            bool: True if there are new commits, False otherwise.
+        """
+        try:
+            print(f"[{self.repo_name}] Pulling latest changes...")
+            
+            subprocess.run(
+                ["git", "-C", self.local_path, "pull"], 
+                check=True, 
+                stdout=subprocess.DEVNULL, # Hide spammy output
+                stderr=subprocess.DEVNULL
+            )
+                
+            current_hash = subprocess.check_output(
+                ["git", "-C", self.local_path, "rev-parse", "HEAD"]
+            ).decode("utf-8").strip() 
+                
+            last_commit_hash = last_commit_hash.strip()
+
+            print(f"Old: {last_commit_hash[:7]}... | New: {current_hash[:7]}...")
+                
+            return current_hash != last_commit_hash
+                
+        except Exception as e:
+            print(f"Error checking updates: {e}")
+            return False

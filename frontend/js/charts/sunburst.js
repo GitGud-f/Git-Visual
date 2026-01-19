@@ -54,11 +54,11 @@ export class SunburstChart {
      */
     update(root) {
         if (!root) return;
-
+        
+        this.focus = root; 
         this.x.domain([0, 1]);
         this.y.domain([0, 1]).range([0, this.radius]);
 
-        this.focus = root; 
 
         const leaves = root.leaves();
         const extensionCounts = d3.rollup(leaves, v => v.length, d => d.data.extension || "other");
@@ -79,25 +79,29 @@ export class SunburstChart {
         paths.join(
             // ENTER: Create new elements (fade in)
             enter => enter.append("path")
-                .attr("d", this.arc)
-                .style("stroke", "#1e1e2e")        // Matches your --bg-dark
+                .attr("class", "slice")
+                .style("stroke", "#1e1e2e")       
                 .style("stroke-width", "1px")
+                 .style("opacity", 0) 
+                 .each(function(d) { this._current = d; }) 
+                 .attr("d", d => this.arc(d)) 
                 .style("fill", d => d.depth === 0 ? "rgba(255,255,255,0.1)" : this.getFileColor(d, topExtensions))
                 .style("cursor", "pointer")
-                .style("opacity", 0)
-                .each(function (d) { this._current = d; })
                 .call(enter => enter.transition().duration(750).style("opacity", 1)),
 
             // UPDATE: Transition existing elements (interpolate angles)
             update => update
                 .style("stroke", "#1e1e2e") 
+                .interrupt() 
                 .style("fill", d => this.getFileColor(d, topExtensions))
                 .call(update => update.transition().duration(750)
                     .attrTween("d", (d, i, nodes) => this.arcTween(d, nodes[i]))
+                    .style("opacity", 1)
                 ),
 
             // EXIT: Remove deleted elements (fade out)
             exit => exit.transition().duration(750)
+                .style("z-index", -1)
                 .style("opacity", 0)
                 .remove()
         )
@@ -205,7 +209,7 @@ export class SunburstChart {
 
         const interpolate = d3.interpolate(previous, newDatapoint);
 
-        element._current = interpolate(0);
+        element._current = interpolate(1); 
 
         return t => this.arc(interpolate(t));
     }

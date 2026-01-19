@@ -38,6 +38,24 @@ def analyze_repo(url: str):
     except Exception as e:
         print(f"INTERNAL SERVER ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/check_update") 
+def check_update(url: str, last_commit_hash: str):
+    """
+    Endpoint to check if the repository has new commits since the last analysis.
+    
+    - **url**: Full HTTPS URL of the git repository.
+    """
+    if not url or "github.com" not in url:
+        raise HTTPException(status_code=400, detail="Invalid GitHub URL provided.")
+
+    try:
+        analyzer = GitAnalyzer(url, history_limit=2000)
+        has_update = analyzer.check_for_updates(last_commit_hash) 
+        return {"has_update": has_update}
+    except Exception as e:
+        print(f"INTERNAL SERVER ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

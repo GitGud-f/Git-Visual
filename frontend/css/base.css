@@ -19,3 +19,24 @@ body {
 }
 
 .hidden { display: none !important; }
+
+
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #007bff; /* Bright Blue */
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 1000; /* Ensure it's on top */
+    animation: slideIn 0.3s ease-out;
+    font-family: sans-serif;
+    font-weight: 500;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}

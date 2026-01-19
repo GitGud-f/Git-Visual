@@ -11,6 +11,7 @@ const API_BASE = "http://localhost:8000";
 let sunburstChart;
 let streamChart;
 let scatterChart;
+let pollingTimer = null;
 
 // DOM Elements
 const btnAnalyze = document.getElementById("btnAnalyze");
@@ -21,7 +22,6 @@ const streamContainer = document.getElementById("stream-chart-container");
 const streamLegendContainer = document.getElementById("stream-legend-container");
 const scatterContainer = document.getElementById("scatterplot-chart-container");
 const scatterLegendContainer = document.getElementById("scatterplot-legend-container");
-
 
 /**
  * Application initialization.
@@ -60,17 +60,50 @@ async function handleAnalyze() {
 
     setLoading(true);
 
-    try {
-        const response = await fetch(`${API_BASE}/analyze?url=${encodeURIComponent(url)}`);
-        
-        if (!response.ok) throw new Error("Failed to fetch repo data");
-        
-        const data = await response.json();
-        console.log("Data received:", data);
-        
-        updateDashboard(data);
+    if (pollingTimer) {
+        clearTimeout(pollingTimer);
+        pollingTimer = null;
+    }
 
+    try {
+        // Initial Load
+        const response = await fetch(`${API_BASE}/analyze?url=${encodeURIComponent(url)}`);
+        if (!response.ok) throw new Error("Failed to fetch repo data");
+
+        let data = await response.json();
+        updateDashboard(data);
         
+        let currentHash = data.history[0].hash;
+
+        const pollForUpdates = async () => {
+            try {
+                console.log("Checking for updates...");
+                
+                const checkResponse = await fetch(`${API_BASE}/check_update?url=${encodeURIComponent(url)}&last_commit_hash=${currentHash}`);
+                
+                const checkStatus = await checkResponse.json(); 
+
+                if (checkStatus.has_update) {
+                    console.log("Update detected! Re-analyzing...");
+                    
+                    const analyzeResponse = await fetch(`${API_BASE}/analyze?url=${encodeURIComponent(url)}`);
+                    const newData = await analyzeResponse.json();
+                    
+                    updateDashboard(newData);
+                    currentHash = newData.history[0].hash;
+                    
+                    showNotification("New commit detected! Dashboard updated.");
+                } else {
+                    console.log("No updates.");
+                }
+            } catch (err) {
+                console.warn("Polling error:", err);
+            }
+
+            pollingTimer = setTimeout(pollForUpdates, 10000);
+        };
+
+        pollingTimer = setTimeout(pollForUpdates, 10000);
 
     } catch (error) {
         console.error(error);
@@ -117,6 +150,14 @@ function setLoading(isLoading) {
         btnAnalyze.disabled = false;
         btnAnalyze.innerText = "Visualize Repository";
     }
+}
+
+function showNotification(msg) {
+    const toast = document.createElement("div");
+    toast.className = "toast"; 
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 init();
