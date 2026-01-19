@@ -39,13 +39,34 @@ function init() {
         console.log("User hovering:", data.name);
     });
 
-    eventBus.on("selectAuthor", (authorName) => {
-         if (authorName) {
+    eventBus.on("selectAuthor", function(authorName) {
+        const source = this; // 'this' is the chart instance that triggered the event
+
+        // If an author is selected (Hover ON)
+        if (authorName) {
             console.log(`Focusing on work by: ${authorName}`);
-            // Future: sunburstChart.highlightFilesByAuthor(authorName);
-        } else {
+
+            // If the event didn't come from Streamgraph, update Streamgraph
+            // Pass 'false' to prevent infinite loop
+            if (source !== streamChart) {
+                streamChart.highlightAuthor(authorName, false);
+            }
+
+            // If the event didn't come from Scatterplot, update Scatterplot
+            if (source !== scatterChart) {
+                scatterChart.highlightAuthor(authorName, false);
+            }
+        } 
+        // If selection is cleared (Hover OFF)
+        else {
             console.log("Cleared author selection");
-            // Future: sunburstChart.resetHighlight();
+            
+            if (source !== streamChart) {
+                streamChart.resetHighlight(false);
+            }
+            if (source !== scatterChart) {
+                scatterChart.resetHighlight(false);
+            }
         }
     });
 }

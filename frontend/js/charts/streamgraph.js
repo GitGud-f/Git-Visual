@@ -156,7 +156,7 @@ export class Streamgraph {
             .attr("title", d => d);
     }
 
-    highlightAuthor(authorName) {
+    highlightAuthor(authorName, broadcast = true) {
         this.layerGroup.selectAll(".layer")
             .transition().duration(200)
             .style("opacity", d => d.key === authorName ? 1 : 0.2);
@@ -165,10 +165,14 @@ export class Streamgraph {
             .classed("active", d => d === authorName)
             .classed("dimmed", d => d !== authorName);
 
-        eventBus.call("selectAuthor", this, authorName);
+            if (broadcast)
+            {
+                eventBus.call("selectAuthor", this, authorName);
+            }
+        
     }
 
-    resetHighlight() {
+    resetHighlight(broadcast = true) {
         this.layerGroup.selectAll(".layer")
             .transition().duration(200)
             .style("opacity", 0.9);
@@ -176,7 +180,9 @@ export class Streamgraph {
         this.legendContainer.selectAll(".stream-legend-item")
             .classed("active", false)
             .classed("dimmed", false);
-
-        eventBus.call("selectAuthor", this, null);
+        if (broadcast)
+        {
+            eventBus.call("selectAuthor", this, null);
+        }
     }
 }

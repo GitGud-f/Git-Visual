@@ -116,7 +116,7 @@ export class Scatterplot {
      * Highlights commits by a specific author.
      * Can be called internally (interaction) or externally (from Streamgraph via main.js)
      */
-    highlightAuthor(authorName) {
+    highlightAuthor(authorName, broadcast = true) {
         // 1. Visual Update: Dim non-matching circles
         this.plotArea.selectAll("circle")
             .transition().duration(200)
@@ -136,10 +136,13 @@ export class Scatterplot {
 
         // 3. Broadcast Event
         // (Use .call to pass 'this' context, enabling main.js to avoid infinite loops if needed)
-        eventBus.call("selectAuthor", this, authorName);
+        if (broadcast)
+        { 
+            eventBus.call("selectAuthor", this, authorName);
+        }
     }
 
-    resetHighlight() {
+    resetHighlight(broadcast = true) {
         // 1. Reset Visuals
         this.plotArea.selectAll("circle")
             .transition().duration(200)
@@ -151,7 +154,9 @@ export class Scatterplot {
             .style("font-weight", "normal");
 
         // 2. Broadcast Reset
-        eventBus.call("selectAuthor", this, null);
+        if (broadcast) {
+            eventBus.call("selectAuthor", this, null);
+        }
     }
 
     showTooltip(event, d) {
