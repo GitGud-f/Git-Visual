@@ -21,7 +21,14 @@ export class Scatterplot {
             .append("g")
             .attr("transform", `translate(${this.margin.left},${this.margin.top})`);
 
-        this.plotArea = this.svg.append("g").attr("class", "plot-area");
+        this.svg.append("defs").append("clipPath")
+            .attr("id", "clip")
+            .append("rect")
+            .attr("width", this.width)
+            .attr("height", this.height);
+        this.plotArea = this.svg.append("g")
+            .attr("class", "plot-area")
+            .attr("clip-path", "url(#clip)");
         this.xAxisGroup = this.svg.append("g").attr("transform", `translate(0,${this.height})`);
         this.yAxisGroup = this.svg.append("g");
 
@@ -31,11 +38,14 @@ export class Scatterplot {
         this.x = d3.scaleTime().range([0, this.width]);
         this.y = d3.scaleSymlog().constant(10).range([this.height, 0]); 
         this.color = d3.scaleOrdinal(d3.schemeTableau10);
+        eventBus.on("filterTime", (range) => this.filterByDate(range));
+
     }
 
     update(data) {
         if (!data || data.length === 0) return;
 
+        this.originalData = data; 
         this.x.domain(d3.extent(data, d => d.dateObj));
         this.y.domain([0, d3.max(data, d => d.impact)]);
         
@@ -74,7 +84,8 @@ export class Scatterplot {
                 update => update.transition().duration(800)
                     .attr("cx", d => this.x(d.dateObj))
                     .attr("cy", d => this.y(d.impact))
-                    .attr("fill", d => this.color(d.author))
+                    .attr("fill", d => this.color(d.author)),
+                exit => exit.transition().duration(500).attr("r", 0).remove()
             )
             // --- EVENT BUS INTEGRATION ---
             .on("mouseover", (e, d) => {
@@ -89,6 +100,60 @@ export class Scatterplot {
             });
 
         this.renderLegend(topAuthors);
+    }
+
+    /**
+     * Filters the scatterplot based on the brush range from Streamgraph
+     * @param {Array<Date>} range [StartDate, EndDate]
+     */
+    filterByDate(range) {
+        if (!this.originalData) return;
+
+        // 1. Update X Domain to zoom in
+        this.x.domain(range);
+        this.xAxisGroup.transition().duration(100).call(d3.axisBottom(this.x)
+            .ticks(5) 
+            .tickFormat(d3.timeFormat("%b %d"))
+            .tickSizeOuter(0));
+            
+        this.xAxisGroup.selectAll("text").attr("dx", "-1em")
+            .attr("dy", ".9em")
+            .attr("transform", "rotate(-45)");
+
+        this.yAxisGroup.call(d3.axisLeft(this.y).ticks(5));
+
+        this.svg.selectAll(".domain, .tick line").style("stroke", "#36364e");
+        this.svg.selectAll("text").style("fill", "#a0a0b0");
+
+        // 2. Filter data visually
+        // OPTION A: Filter data points (remove dots outside range)
+        const filteredData = this.originalData.filter(d => 
+            d.dateObj >= range[0] && d.dateObj <= range[1]
+        );
+        this.plotArea.selectAll("circle")
+            .data(filteredData, d => d.hash)
+            .join(
+                enter => enter.append("circle")
+                    .attr("cx", d => this.x(d.dateObj))
+                    .attr("cy", d => this.y(d.impact))
+                    .attr("r", 0)
+                    .attr("fill", d => this.color(d.author))
+                    .attr("opacity", 0.7)
+                    .call(enter => enter.transition().duration(300).attr("r", 3.5)),
+                update => update.transition().duration(500)
+                    .attr("cx", d => this.x(d.dateObj))
+                    .attr("cy", d => this.y(d.impact))
+                    .attr("fill", d => this.color(d.author)),
+                exit => exit.transition().duration(500).attr("r", 0).remove()
+            )
+            .on("mouseover", (e, d) => {
+                this.showTooltip(e, d);
+                this.highlightAuthor(d.author); 
+            })
+            .on("mouseout", () => {
+                this.hideTooltip();
+                this.resetHighlight();
+            });
     }
 
     renderLegend(authors) {

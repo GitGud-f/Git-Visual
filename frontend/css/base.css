@@ -14,8 +14,8 @@ body {
     background-color: var(--bg-dark);
     color: var(--text-main);
     font-family: var(--font-family);
-    height: 100vh;
-    overflow: hidden; 
+    min-height: 100vh;
+    overflow-y: auto; 
 }
 
 .hidden { display: none !important; }

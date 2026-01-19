@@ -1,15 +1,16 @@
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 60px 1fr 1fr;
+    grid-template-rows: auto 450px 500px;
     grid-template-areas: 
         "header header"
         "sunburst scatterplot"
         "temporal temporal";
-    height: 100%;
+    width: 100%;
     gap: 10px;
-    padding: 10px;
+    padding: 15px;
     box-sizing: border-box;
+    padding-bottom: 50px;
 }
 
 /* Area Assignments */
@@ -17,3 +18,15 @@
 .view-sunburst { grid-area: sunburst; }
 .view-scatterplot { grid-area: scatterplot; }
 .view-temporal { grid-area: temporal; }
+
+@media (max-width: 1000px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 450px 450px 500px;
+        grid-template-areas: 
+            "header"
+            "sunburst"
+            "scatterplot"
+            "temporal";
+    }
+}
