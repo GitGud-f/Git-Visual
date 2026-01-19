@@ -1,0 +1,97 @@
+/* Container for the Commit Graph View */
+.view-commit-graph {
+    grid-area: graph;
+    min-height: 300px; /* Reduced height if horizontal */
+    width: 100%;       /* Ensure it takes full width */
+}
+
+.commitgraph-body {
+    flex: 1;
+    position: relative;
+    background-color: #1a1a2e; /* Slightly darker background for depth */
+    overflow: hidden;
+    border-radius: 0 0 8px 8px;
+}
+
+#commit-graph-container {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+#commit-graph-container:active {
+    cursor: grabbing;
+}
+
+/* Commit Nodes (Circles) */
+.commit-node {
+    stroke: #1e1e2e;
+    stroke-width: 1.5px;
+    transition: r 0.3s ease, opacity 0.3s ease, stroke 0.3s ease;
+}
+
+.commit-node:hover {
+    stroke: #ffffff;
+    stroke-width: 2px;
+}
+
+/* Graph Links (Lines) */
+.commit-link {
+    stroke: #4a4a5e;
+    stroke-opacity: 0.4;
+    stroke-width: 1.5px;
+    fill: none;
+    transition: stroke 0.3s ease, stroke-opacity 0.3s ease;
+}
+
+/* Highlighting Logic for Linkage */
+.commit-link.highlighted {
+    stroke: #64ffda; /* Cyan highlight for active paths */
+    stroke-opacity: 1;
+    stroke-width: 2px;
+}
+
+/* Markers (Arrows) */
+#arrowhead path {
+    fill: #4a4a5e;
+}
+
+/* Tooltip for the Graph */
+.graph-tooltip {
+    position: absolute;
+    padding: 10px;
+    background: rgba(30, 30, 46, 0.95);
+    border: 1px solid #4a4a5e;
+    color: #e0e0e0;
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.graph-tooltip strong {
+    color: #64ffda;
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* Axis-like Time Labels (Optional but helps standard) */
+.graph-time-label {
+    fill: #a0a0b0;
+    font-size: 10px;
+    font-family: 'Inter', sans-serif;
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Scrollbar for the container if needed */
+.commitgraph-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.commitgraph-body::-webkit-scrollbar-thumb {
+    background: #36364e;
+    border-radius: 10px;
+}

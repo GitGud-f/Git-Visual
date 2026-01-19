@@ -123,4 +123,25 @@ export class DataProcessor {
             dateObj: new Date(d.date) // or parseDate(d.date) if format changes
         })).sort((a, b) => a.dateObj - b.dateObj);
     }
+
+    static processCommitGraph(history) {
+        if (!history) return { nodes: [], links: [] };
+
+        const nodes = history.map(d => ({ ...d, id: d.hash }));
+        const links = [];
+        const nodeIds = new Set(nodes.map(n => n.id));
+
+        history.forEach(commit => {
+            commit.parents.forEach(parentHash => {
+                if (nodeIds.has(parentHash)) {
+                    links.push({
+                        source: parentHash, // Parent (Older)
+                        target: commit.hash  // Child (Newer)
+                    });
+                }
+            });
+        });
+
+        return { nodes, links };
+    }
 }

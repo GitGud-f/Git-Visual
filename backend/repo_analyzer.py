@@ -13,9 +13,18 @@ from datetime import datetime
 CACHE_DIR = "cache"
 
 IGNORED_FOLDERS = {
-    '.git', '.idea', '.vscode', '__pycache__', 'node_modules', 
-    'venv', 'env', 'dist', 'build', 'coverage'
+    ".git",
+    ".idea",
+    ".vscode",
+    "__pycache__",
+    "node_modules",
+    "venv",
+    "env",
+    "dist",
+    "build",
+    "coverage",
 }
+
 
 class GitAnalyzer:
     """
@@ -25,6 +34,7 @@ class GitAnalyzer:
         2. Builds a hierarchical file structure with LOC for visualization.
         3. Extracts commit history for analysis.
     """
+
     def __init__(self, repo_url: str, history_limit: int = 2000):
         """
         Initialize the analyzer.
@@ -42,7 +52,7 @@ class GitAnalyzer:
         """
         Clones the repository if it does not exist locally.
         If it exists, performs a 'git pull' to fetch the latest changes.
-        
+
         Raises:
             Exception: If network connectivity fails or the URL is invalid.
         """
@@ -69,24 +79,25 @@ class GitAnalyzer:
         Returns: Dict[filepath, Set[authors]]
         """
         file_authors = {}
-        repo = Repository(self.local_path, order='reverse')
-        
+        repo = Repository(self.local_path, order="reverse")
+
         count = 0
         for commit in repo.traverse_commits():
-            if count > self.history_limit: break
-            
+            if count > self.history_limit:
+                break
+
             for modified_file in commit.modified_files:
-                if modified_file.new_path: 
-                    path = modified_file.new_path.replace("\\", "/") 
+                if modified_file.new_path:
+                    path = modified_file.new_path.replace("\\", "/")
                     if path not in file_authors:
                         file_authors[path] = set()
                     file_authors[path].add(commit.author.name)
             count += 1
         return file_authors
-    
+
     def get_file_structure(self) -> Dict[str, Any]:
         """
-        Recursively walks the directory to build a hierarchy suitable for 
+        Recursively walks the directory to build a hierarchy suitable for
         d3.hierarchy() and Sunburst charts.
 
         Structure format:
@@ -102,7 +113,7 @@ class GitAnalyzer:
         """
         print(f"[{self.repo_name}] Mapping authors to files...")
         file_author_map = self._get_file_authors()
-        
+
         def path_to_dict(path: str) -> Optional[Dict[str, Any]]:
             """
             Recursively builds a dict representing file structure.
@@ -111,49 +122,51 @@ class GitAnalyzer:
             Returns:
                 dict: Hierarchical representation of files/directories, None for .git
             """
-            
+
             name = os.path.basename(path)
-            
+
             if name in IGNORED_FOLDERS:
                 return None
-            
+
             if os.path.islink(path):
-                return None 
+                return None
 
             rel_path = os.path.relpath(path, self.local_path).replace("\\", "/")
-            
-            d = {'name': name}
-            
+
+            d = {"name": name}
+
             if os.path.isdir(path):
 
-                children = [path_to_dict(os.path.join(path, x)) for x in os.listdir(path)]
-                d['children'] = [c for c in children if c is not None]
-                d['type'] = 'folder'
-                
+                children = [
+                    path_to_dict(os.path.join(path, x)) for x in os.listdir(path)
+                ]
+                d["children"] = [c for c in children if c is not None]
+                d["type"] = "folder"
+
             else:
                 try:
-                    with open(path, 'r', encoding='utf-8', errors='replace') as f:
-                        d['value'] = sum(1 for _ in f) 
-                        
+                    with open(path, "r", encoding="utf-8", errors="replace") as f:
+                        d["value"] = sum(1 for _ in f)
+
                     _, ext = os.path.splitext(name)
-                    d['extension'] = ext.lower()
-                    d['type'] = 'file'
-                    d['authors'] = list(file_author_map.get(rel_path, [])) 
-                    
+                    d["extension"] = ext.lower()
+                    d["type"] = "file"
+                    d["authors"] = list(file_author_map.get(rel_path, []))
+
                 except Exception:
-                    d['value'] = 0 
-                    d['type'] = 'binary'
-                    
-                    d['authors'] = []
-                    
+                    d["value"] = 0
+                    d["type"] = "binary"
+
+                    d["authors"] = []
+
             return d
-        
+
         print(f"[{self.repo_name}] Analyzing file structure...")
         root_structure = path_to_dict(self.local_path)
-        
+
         if root_structure:
-            root_structure['name'] = self.repo_name
-            
+            root_structure["name"] = self.repo_name
+
         return root_structure
 
     def get_commit_history(self) -> List[Dict[str, Any]]:
@@ -165,28 +178,34 @@ class GitAnalyzer:
             List[Dict[str, Any]]: A list of commit objects containing author, date, and stats.
         """
         commits_data = []
-        
-        print(f"[{self.repo_name}] Mining commit history (Limit: {self.history_limit})...")
-        
-        repo = Repository(self.local_path, order='reverse') 
-        
+
+        print(
+            f"[{self.repo_name}] Mining commit history (Limit: {self.history_limit})..."
+        )
+
+        repo = Repository(self.local_path, order="reverse")
+
         count = 0
         for commit in repo.traverse_commits():
-            if count > self.history_limit: 
+            if count > self.history_limit:
                 break
-            
-            commits_data.append({
-                "hash": commit.hash,
-                "msg": commit.msg.split('\n')[0],
-                "author": commit.author.name,
-                "date": commit.committer_date.isoformat(),
-                "files_changed": len(commit.modified_files),
-                "impact": commit.insertions + commit.deletions,
-                "insertions": commit.insertions,
-                "deletions": commit.deletions
-            })
+
+            commits_data.append(
+                {
+                    "hash": commit.hash,
+                    "msg": commit.msg.split("\n")[0],
+                    "author": commit.author.name,
+                    "date": commit.committer_date.isoformat(),
+                    "files_changed": len(commit.modified_files),
+                    "impact": commit.insertions + commit.deletions,
+                    "insertions": commit.insertions,
+                    "deletions": commit.deletions,
+                    "parents": list(commit.parents),
+                    "branch": commit.branches,  
+                }
+            )
             count += 1
-            
+
         return commits_data
 
     def analyze(self) -> Dict[str, Any]:
@@ -200,42 +219,46 @@ class GitAnalyzer:
         return {
             "meta": {
                 "repo_name": self.repo_name,
-                "analyzed_at": datetime.now().isoformat()
+                "analyzed_at": datetime.now().isoformat(),
             },
             "file_tree": self.get_file_structure(),
-            "history": self.get_commit_history()
+            "history": self.get_commit_history(),
         }
-    
+
     def check_for_updates(self, last_commit_hash: str) -> bool:
         """
         Checks if there are new commits in the remote repository since the last analysis.
         By comparing the latest commit hash with the provided one.
 
-        Args: 
+        Args:
             last_commit_hash (str): The hash of the last commit from previous analysis.
         Returns:
             bool: True if there are new commits, False otherwise.
         """
         try:
             print(f"[{self.repo_name}] Pulling latest changes...")
-            
+
             subprocess.run(
-                ["git", "-C", self.local_path, "pull"], 
-                check=True, 
-                stdout=subprocess.DEVNULL, # Hide spammy output
-                stderr=subprocess.DEVNULL
+                ["git", "-C", self.local_path, "pull"],
+                check=True,
+                stdout=subprocess.DEVNULL,  # Hide spammy output
+                stderr=subprocess.DEVNULL,
             )
-                
-            current_hash = subprocess.check_output(
-                ["git", "-C", self.local_path, "rev-parse", "HEAD"]
-            ).decode("utf-8").strip() 
-                
+
+            current_hash = (
+                subprocess.check_output(
+                    ["git", "-C", self.local_path, "rev-parse", "HEAD"]
+                )
+                .decode("utf-8")
+                .strip()
+            )
+
             last_commit_hash = last_commit_hash.strip()
 
             print(f"Old: {last_commit_hash[:7]}... | New: {current_hash[:7]}...")
-                
+
             return current_hash != last_commit_hash
-                
+
         except Exception as e:
             print(f"Error checking updates: {e}")
             return False

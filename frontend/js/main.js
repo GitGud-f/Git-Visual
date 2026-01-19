@@ -3,6 +3,7 @@ import eventBus from './eventBus.js';
 import { Streamgraph } from './charts/streamgraph.js';
 import { Scatterplot } from './charts/scatterplot.js';
 import { DataProcessor } from './dataProcessor.js';
+import { CommitGraph } from './charts/commitGraph.js';
 
 // Configuration
 const API_BASE = "http://localhost:8000";
@@ -11,6 +12,7 @@ const API_BASE = "http://localhost:8000";
 let sunburstChart;
 let streamChart;
 let scatterChart;
+let commitGraph;
 let pollingTimer = null;
 
 // DOM Elements
@@ -22,6 +24,7 @@ const streamContainer = document.getElementById("stream-chart-container");
 const streamLegendContainer = document.getElementById("stream-legend-container");
 const scatterContainer = document.getElementById("scatterplot-chart-container");
 const scatterLegendContainer = document.getElementById("scatterplot-legend-container");
+const commitGraphContaineer = document.getElementById("commit-graph-container")
 
 /**
  * Application initialization.
@@ -31,6 +34,7 @@ function init() {
     sunburstChart = new SunburstChart(sunburstContainer);
     streamChart = new Streamgraph(streamContainer, streamLegendContainer);
     scatterChart = new Scatterplot(scatterContainer, scatterLegendContainer);
+    commitGraph = new CommitGraph(commitGraphContaineer);
 
 
     btnAnalyze.addEventListener("click", handleAnalyze);
@@ -56,10 +60,15 @@ function init() {
             if (source !== scatterChart) {
                 scatterChart.highlightAuthor(authorName, false);
             }
+             if (source !== commitGraph) {
+                commitGraph.highlightAuthor(authorName, false);
+            }
 
             if (sunburstChart) {
                 sunburstChart.highlightAuthor(authorName);
             }
+            if (commitGraph)
+                commitGraph.highlightAuthor(authorName);
         }
         // If selection is cleared (Hover OFF)
         else {
@@ -71,6 +80,9 @@ function init() {
             }
             if (source !== scatterChart) {
                 scatterChart.resetHighlight(false);
+            }
+            if(source !== commitGraph){
+                commitGraph.resetHighlight(false);
             }
         }
     });
@@ -158,7 +170,11 @@ function updateDashboard(data) {
 
         const scatterData = DataProcessor.processScatterplotData(data.history);
         scatterChart.update(scatterData);
+
+        const graphData = DataProcessor.processCommitGraph(data.history);
+        commitGraph.update(graphData);
     }
+
 }
 
 /**
