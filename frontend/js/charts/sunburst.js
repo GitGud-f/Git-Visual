@@ -31,8 +31,8 @@ export class SunburstChart {
 
         this.partition = d3.partition();
 
-        this.x = d3.scaleLinear().range([0, 2 * Math.PI]);
-        this.y = d3.scaleSqrt().range([0, this.radius]);
+        this.x = d3.scaleLinear().domain([0, 1]).range([0, 2 * Math.PI]);
+        this.y = d3.scaleSqrt().domain([0, 1]).range([0, this.radius]);
 
         this.arc = d3.arc()
             .startAngle(d => Math.max(0, Math.min(2 * Math.PI, this.x(d.x0))))
@@ -55,10 +55,8 @@ export class SunburstChart {
     update(root) {
         if (!root) return;
 
-        this.x.domain([0, 1]);
-        this.y.domain([0, 1]).range([0, this.radius]);
 
-        this.focus = root; 
+        this.focus = root;
 
         const leaves = root.leaves();
         const extensionCounts = d3.rollup(leaves, v => v.length, d => d.data.extension || "other");
@@ -80,31 +78,39 @@ export class SunburstChart {
             // ENTER: Create new elements (fade in)
             enter => enter.append("path")
                 .attr("d", this.arc)
-                .style("stroke", "#1e1e2e")        // Matches your --bg-dark
+                .style("stroke", "#1e1e2e")
                 .style("stroke-width", "1px")
-                .style("fill", d => d.depth === 0 ? "rgba(255,255,255,0.1)" : this.getFileColor(d, topExtensions))
+                .style("fill", d => this.getFileColor(d, this.color.domain()))
                 .style("cursor", "pointer")
                 .style("opacity", 0)
-                .each(function (d) { this._current = d; })
-                .call(enter => enter.transition().duration(750).style("opacity", 1)),
-
-            // UPDATE: Transition existing elements (interpolate angles)
-            update => update
-                .style("stroke", "#1e1e2e") 
-                .style("fill", d => this.getFileColor(d, topExtensions))
-                .call(update => update.transition().duration(750)
+                // Cache the initial state for future transitions
+                .each(function (d) {
+                    this._current = { x0: d.x0, x1: d.x0, y0: d.y0, y1: d.y1 };
+                })
+                .call(enter => enter.transition().duration(750)
+                    .style("opacity", 1)
                     .attrTween("d", (d, i, nodes) => this.arcTween(d, nodes[i]))
                 ),
 
-            // EXIT: Remove deleted elements (fade out)
+            update => update
+                .call(update => update.transition().duration(750)
+                    // This is the core fix: interpolate "d" for EVERY node
+                    .attrTween("d", (d, i, nodes) => this.arcTween(d, nodes[i]))
+                )
+                // Update colors in case a folder became a file or vice versa
+                .style("fill", d => this.getFileColor(d, this.color.domain())),
+
             exit => exit.transition().duration(750)
                 .style("opacity", 0)
+                .attrTween("d", (d, i, nodes) => {
+                    const endState = { x0: d.x0, x1: d.x0, y0: d.y0, y1: d.y1 };
+                    const interp = d3.interpolate(this._current || d, endState);
+                    return t => this.arc(interp(t));
+                })
                 .remove()
         )
-            .on("mouseover", (e, d) => {
-                this.handleMouseOver(e, d);
-                eventBus.call("hoverFile", this, d.data);
-            })
+            // Re-bind events to the new/updated elements
+            .on("mouseover", (e, d) => this.handleMouseOver(e, d))
             .on("mousemove", (e) => this.handleMouseMove(e))
             .on("mouseout", (e, d) => this.handleMouseOut(e, d))
             .on("click", (e, d) => this.clickToZoom(d));
@@ -200,14 +206,28 @@ export class SunburstChart {
     * @param {SVGPathElement} element - The SVG path element being updated.
     * @returns {function} - The interpolator function for D3 transition.
      */
-    arcTween(newDatapoint, element) {
-        const previous = element._current || newDatapoint;
+    arcTween(d, element) {
+        const oldCoords = {
+            x0: element._current.x0,
+            x1: element._current.x1,
+            y0: element._current.y0,
+            y1: element._current.y1
+        };
+        const newCoords = {
+            x0: d.x0,
+            x1: d.x1,
+            y0: d.y0,
+            y1: d.y1
+        };
 
-        const interpolate = d3.interpolate(previous, newDatapoint);
+        const i = d3.interpolate(oldCoords, newCoords);
 
-        element._current = interpolate(0);
+        element._current = newCoords;
 
-        return t => this.arc(interpolate(t));
+        return (t) => {
+            // Return the path string for the interpolated coordinates
+            return this.arc(i(t));
+        };
     }
 
     /**
@@ -272,7 +292,7 @@ export class SunburstChart {
             .duration(750)
             .tween("scale", () => {
                 const xd = d3.interpolate(this.x.domain(), [target.x0, target.x1]);
-            
+
                 const yd = d3.interpolate(this.y.domain(), [target.y0, 1]);
                 const yr = d3.interpolate(this.y.range(), [target.y0 ? 20 : 0, this.radius]);
                 return t => {
