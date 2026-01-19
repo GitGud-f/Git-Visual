@@ -1,0 +1,61 @@
+#scatterplot-chart-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.scatterplot-body {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+}
+
+#scatterplot-chart-container circle {
+    cursor: pointer;
+    transition: r 0.2s, opacity 0.2s;
+}
+
+#scatterplot-chart-container circle:hover {
+    r: 6px;
+    opacity: 1;
+    stroke: #fff;
+    stroke-width: 2px;
+}
+
+/* Legend Styling (similar to Streamgraph but simplified) */
+#scatterplot-legend-container {
+    width: 140px;
+    min-width: 140px;
+    border-left: 1px solid var(--border);
+    padding: 10px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    background: rgba(0,0,0,0.1);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    color: var(--text-muted);
+}
+
+.legend-color-box {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.scatter-tooltip {
+    position: absolute;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 8px;
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    z-index: 1000;
+}

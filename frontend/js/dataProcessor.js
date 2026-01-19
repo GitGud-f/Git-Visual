@@ -80,4 +80,25 @@ export class DataProcessor {
 
         return { data: processedData, keys: finalKeys };
     }
+
+    /**
+     * Prepares raw commit history for the Scatterplot.
+     * 
+     * @param {Array<Object>} history - Array of commit objects.
+     * @returns {Array} - Cleaned array with parsed dates and numeric impact.
+     */
+    static processScatterplotData(history) {
+        if (!history || history.length === 0) return [];
+
+        const parseDate = d3.timeParse("%Y-%m-%dT%H:%M:%S%Z");
+
+        return history.map(d => ({
+            hash: d.hash,
+            author: d.author,
+            msg: d.msg,
+            // Impact is insertions + deletions, provided by backend
+            impact: d.impact, 
+            dateObj: new Date(d.date) // or parseDate(d.date) if format changes
+        })).sort((a, b) => a.dateObj - b.dateObj);
+    }
 }

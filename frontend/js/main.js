@@ -1,6 +1,7 @@
 import { SunburstChart } from './charts/sunburst.js';
 import eventBus  from './eventBus.js';
 import { Streamgraph } from './charts/streamgraph.js';
+import { Scatterplot } from './charts/scatterplot.js'; 
 import { DataProcessor } from './dataProcessor.js';
 
 // Configuration
@@ -9,6 +10,7 @@ const API_BASE = "http://localhost:8000";
 // State Holders
 let sunburstChart;
 let streamChart;
+let scatterChart;
 
 // DOM Elements
 const btnAnalyze = document.getElementById("btnAnalyze");
@@ -17,6 +19,8 @@ const loadingIndicator = document.getElementById("loading");
 const sunburstContainer = document.getElementById("sunburst-container");
 const streamContainer = document.getElementById("stream-chart-container");
 const streamLegendContainer = document.getElementById("stream-legend-container");
+const scatterContainer = document.getElementById("scatterplot-chart-container");
+const scatterLegendContainer = document.getElementById("scatterplot-legend-container");
 
 
 /**
@@ -26,6 +30,8 @@ const streamLegendContainer = document.getElementById("stream-legend-container")
 function init() {
     sunburstChart = new SunburstChart(sunburstContainer);
     streamChart = new Streamgraph(streamContainer, streamLegendContainer);
+    scatterChart = new Scatterplot(scatterContainer, scatterLegendContainer);
+
 
     btnAnalyze.addEventListener("click", handleAnalyze);
 
@@ -91,6 +97,9 @@ function updateDashboard(data) {
     if (data.history) {
         const streamData = DataProcessor.processCommitsByAuthor(data.history);
         streamChart.update(streamData);
+
+        const scatterData = DataProcessor.processScatterplotData(data.history);
+        scatterChart.update(scatterData);
     }
 }
 
