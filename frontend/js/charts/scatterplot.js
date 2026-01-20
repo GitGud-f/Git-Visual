@@ -46,8 +46,9 @@ export class Scatterplot {
 
         this.originalData = data; 
         this.x.domain(d3.extent(data, d => d.dateObj));
-        this.y.domain([0, d3.max(data, d => d.impact)]);
-        
+        let maxHeight = d3.max(data, d => d.impact);
+        this.y.domain([0, maxHeight + maxHeight * 0.1]);
+
         const topAuthors = Array.from(d3.rollup(data, v => v.length, d => d.author))
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10)
