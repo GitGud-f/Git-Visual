@@ -89,7 +89,6 @@ export class SunburstChart {
                 .style("fill", d => this.getFileColor(d))
                 .style("cursor", "pointer")
                 .style("opacity", 0)
-                // Cache the initial state for future transitions
                 .each(function (d) {
                     this._current = { x0: d.x0, x1: d.x0, y0: d.y0, y1: d.y1 };
                 })
@@ -100,10 +99,8 @@ export class SunburstChart {
 
             update => update
                 .call(update => update.transition().duration(750)
-                    // This is the core fix: interpolate "d" for EVERY node
                     .attrTween("d", (d, i, nodes) => this.arcTween(d, nodes[i]))
                 )
-                // Update colors in case a folder became a file or vice versa
                 .style("fill", d => this.getFileColor(d)),
 
             exit => exit.transition().duration(750)
@@ -115,7 +112,6 @@ export class SunburstChart {
                 })
                 .remove()
         )
-            // Re-bind events to the new/updated elements
             .on("mouseover", (e, d) => this.handleMouseOver(e, d))
             .on("mousemove", (e) => this.handleMouseMove(e))
             .on("mouseout", (e, d) => this.handleMouseOut(e, d))
@@ -127,9 +123,8 @@ export class SunburstChart {
     /**
      * Renders the interactive HTML legend.
      * @param {Array} allExtensions - [extension, count] pairs
-     * @param {Array} topExtensions - Just the keys of top extensions
      */
-    renderLegend(allExtensions, topExtensions) {
+    renderLegend(allExtensions) {
         this.legendContainer.classed("hidden", false).html(""); // Clear existing
 
         let legendData = allExtensions.slice(0, 12);
@@ -189,6 +184,11 @@ export class SunburstChart {
             });
     }
 
+    /**
+     * 
+     * @param {} ext 
+     * @returns 
+     */
     normalizeExtension(ext) {
         if (!ext || !this.currentTopExtensions.includes(ext)) {
             return "other";
@@ -281,12 +281,10 @@ export class SunburstChart {
     handleMouseOut(event, d) {
         this.tooltip.classed("hidden", true);
 
-        // Reset Chart Opacity
         if (event && event.currentTarget) {
             d3.select(event.currentTarget).style("opacity", 1);
         }
 
-        // Reset Legend Opacity
         this.legendContainer.selectAll(".legend-item")
             .classed("dimmed", false)
             .classed("active", false);
@@ -321,7 +319,6 @@ export class SunburstChart {
         this.svg.selectAll("path")
             .transition().duration(200)
             .style("opacity", d => {
-                // Check if the author exists in this node's aggregated authors list
                 const isRelated = d.authors && d.authors.includes(authorName);
                 return isRelated ? 1 : 0.1;
             })

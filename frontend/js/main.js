@@ -86,6 +86,11 @@ function init() {
             }
         }
     });
+
+    eventBus.on("filterTime", function (range) {
+        scatterChart.filterByDate(range);
+        commitGraph.filterByDate(range);
+    });
 }
 
 /**

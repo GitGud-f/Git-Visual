@@ -38,7 +38,6 @@ export class Scatterplot {
         this.x = d3.scaleTime().range([0, this.width]);
         this.y = d3.scaleSymlog().constant(10).range([this.height, 0]); 
         this.color = d3.scaleOrdinal(d3.schemeTableau10);
-        eventBus.on("filterTime", (range) => this.filterByDate(range));
 
     }
 

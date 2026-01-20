@@ -3,73 +3,92 @@ import eventBus from '../eventBus.js';
 export class CommitGraph {
     constructor(container) {
         this.container = container;
-        this.width = container.clientWidth;
-        this.height = container.clientHeight;
-
+        this.margin = { top: 40, right: 50, bottom: 40, left: 80 };
+        
+        // Setup SVG
         this.svg = d3.select(container).append("svg")
             .attr("width", "100%")
-            .attr("height", "100%")
-            .attr("viewBox", [0, 0, this.width, this.height]);
+            .attr("height", "100%");
 
-        this.g = this.svg.append("g");
+        this.g = this.svg.append("g")
+            .attr("transform", `translate(${this.margin.left},${this.margin.top})`);
 
-        // Arrowhead definition for links
-        this.svg.append("defs").append("marker")
-            .attr("id", "arrowhead")
-            .attr("viewBox", "0 -5 10 10")
-            .attr("refX", 15)
-            .attr("refY", 0)
-            .attr("orient", "auto")
-            .attr("markerWidth", 6)
-            .attr("markerHeight", 6)
-            .append("path")
-            .attr("d", "M0,-5L10,0L0,5")
-            .attr("fill", "#4a4a5e");
+        // Sub-groups for layering (Links behind nodes)
+        this.linkLayer = this.g.append("g").attr("class", "links-layer");
+        this.nodeLayer = this.g.append("g").attr("class", "nodes-layer");
 
-        this.simulation = d3.forceSimulation()
-            .force("link", d3.forceLink().id(d => d.id).distance(50)) // Increased distance for horizontal clarity
-            .force("charge", d3.forceManyBody().strength(-100))
-            .force("center", d3.forceCenter(this.width / 2, this.height / 2))
-            // New Horizontal Constraint: Time on X-axis
-            .force("x", d3.forceX(d => {
-                const timeScale = d3.scaleTime()
-                    .domain(d3.extent(this.nodes, n => new Date(n.date)))
-                    .range([50, this.width - 50]); // Margin of 50px
-                return timeScale(new Date(d.date));
-            }).strength(1.5))
-            // New Vertical Constraint: Stay in the middle
-            .force("y", d3.forceY(this.height / 2).strength(0.2));
-
+        // Scales
+        this.x = d3.scaleTime();
+        this.y = d3.scalePoint().padding(0.5);
+        this.color = d3.scaleOrdinal(d3.schemeTableau10);
+        this.radiusScale = d3.scaleSqrt().range([4, 12]);
 
         this.tooltip = d3.select("body").append("div")
             .attr("class", "tooltip graph-tooltip hidden");
-        this.color = d3.scaleOrdinal(d3.schemeTableau10);
-    }
+        }
 
     update(data) {
         this.nodes = data.nodes;
         this.links = data.links;
 
-        // Enter/Update/Exit for Links
-        this.linkElements = this.g.selectAll(".commit-link")
-            .data(this.links)
-            .join("line")
-            .attr("class", "commit-link")
-            .attr("stroke", "#4a4a5e")
-            .attr("stroke-width", 1)
-            .attr("marker-end", "url(#arrowhead)");
+        const width = this.container.clientWidth - this.margin.left - this.margin.right;
+        const height = this.container.clientHeight - this.margin.top - this.margin.bottom;
 
-        // Enter/Update/Exit for Nodes
-        this.nodeElements = this.g.selectAll(".commit-node")
+        // 1. Setup Scales
+        this.x.domain(d3.extent(this.nodes, d => new Date(d.date))).range([0, width]);
+        
+        const authors = Array.from(new Set(this.nodes.map(d => d.author)));
+        this.y.domain(authors).range([0, height]);
+        
+        this.radiusScale.domain([0, d3.max(this.nodes, d => d.impact || 0)]);
+
+        // 2. Build a lookup map for coordinates
+        const nodeMap = new Map(this.nodes.map(d => [d.hash, d]));
+
+        // 3. Render Links (Metro Line Style)
+        this.linkLayer.selectAll(".commit-link")
+            .data(this.links)
+            .join("path")
+            .attr("class", "commit-link")
+            .attr("d", d => {
+                const source = nodeMap.get(d.source);
+                const target = nodeMap.get(d.target);
+                if (!source || !target) return null;
+
+                const x0 = this.x(new Date(source.date));
+                const y0 = this.y(source.author);
+                const x1 = this.x(new Date(target.date));
+                const y1 = this.y(target.author);
+
+                // Professional "Metro" Curve: Horizontal -> Curve -> Horizontal
+                return `M ${x0} ${y0} 
+                        C ${(x0 + x1) / 2} ${y0}, 
+                          ${(x0 + x1) / 2} ${y1}, 
+                          ${x1} ${y1}`;
+            })
+            .attr("stroke", d => this.color(nodeMap.get(d.target).author))
+            .attr("stroke-width", 10)
+            .attr("fill", "none")
+            .attr("opacity", 0.9);
+
+        // 4. Render Nodes
+        this.nodeLayer.selectAll(".commit-node")
             .data(this.nodes, d => d.hash)
             .join(
                 enter => enter.append("circle")
                     .attr("class", "commit-node")
-                    .attr("r", 5)
+                    .attr("r", d => this.radiusScale(d.impact))
+                    .attr("cx", d => this.x(new Date(d.date)))
+                    .attr("cy", d => this.y(d.author))
                     .attr("fill", d => this.color(d.author))
-                    .call(enter => enter.transition().attr("r", 6)),
-                update => update,
-                exit => exit.remove()
+                    .style("stroke", "#fff")
+                    .style("stroke-width", 2)
+                    .attr("opacity", 0)
+                    .call(e => e.transition().duration(800).attr("opacity", 1)),
+                update => update.transition().duration(800)
+                    .attr("cx", d => this.x(new Date(d.date)))
+                    .attr("cy", d => this.y(d.author))
+                    .attr("r", d => this.radiusScale(d.impact))
             )
             .on("mouseover", (e, d) => {
                 this.showTooltip(e, d);
@@ -77,78 +96,95 @@ export class CommitGraph {
             })
             .on("mouseout", () => {
                 this.hideTooltip();
-                this.resetHighlight(true);
+                this.resetHighlight();
                 eventBus.call("selectAuthor", this, null);
             });
 
-        this.simulation.nodes(this.nodes);
-        this.simulation.force("link").links(this.links);
-
-        const timeScale = d3.scaleTime()
-            .domain(d3.extent(this.nodes, n => new Date(n.date)))
-            .range([50, this.width - 50]);
-
-        this.simulation.force("x", d3.forceX(d => timeScale(new Date(d.date))).strength(1.5));
-
-        this.simulation.alpha(1).restart();
-
-        this.simulation.on("tick", () => {
-            this.linkElements
-                .attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
-
-            this.nodeElements
-                .attr("cx", d => d.x)
-                .attr("cy", d => d.y);
-        });
+        // 5. Add Lane Labels (Professional touch)
+        this.g.selectAll(".lane-label")
+            .data(authors)
+            .join("text")
+            .attr("class", "lane-label")
+            .attr("x", -10)
+            .attr("y", d => this.y(d))
+            .attr("text-anchor", "end")
+            .attr("alignment-baseline", "middle")
+            .text(d => d.split(' ')[0]) // Short name
+            .style("font-size", "10px")
+            .style("fill", "#aaa");
     }
-
 
     highlightAuthor(authorName) {
-        this.nodeElements
-            .transition().duration(200)
-            .attr("opacity", d => (d.author === authorName || !authorName) ? 1 : 0.1)
-            .attr("r", d => d.author === authorName ? 8 : 5);
+        this.nodeLayer.selectAll(".commit-node")
+            .transition().duration(250)
+            .attr("opacity", d => (d.author === authorName || !authorName) ? 1 : 0.05)
+            .style("filter", d => d.author === authorName ? "drop-shadow(0 0 4px white)" : "none");
+
+        this.linkLayer.selectAll(".commit-link")
+            .transition().duration(250)
+            .attr("opacity", d => {
+                // Find node associated with this link
+                const targetNode = this.nodes.find(n => n.hash === d.target);
+                return (targetNode.author === authorName) ? 0.8 : 0.05;
+            })
+            .attr("stroke-width", d => {
+                 const targetNode = this.nodes.find(n => n.hash === d.target);
+                 return targetNode.author === authorName ? 20 : 10;
+            });
     }
-    /**
- * Resets the visual state of the graph.
- * @param {boolean} broadcast - Whether to notify other charts via the eventBus.
- */
-    resetHighlight(broadcast = true) {
-        // 1. Restore Nodes
-        this.nodeElements
-            .transition().duration(200)
+
+    resetHighlight() {
+        this.nodeLayer.selectAll(".commit-node")
+            .transition().duration(250)
             .attr("opacity", 1)
-            .attr("r", 6) // Matches original size in update()
-            .style("stroke", "#1e1e2e")
-            .style("stroke-width", "1.5px");
+            .style("filter", "none");
 
-        // 2. Restore Links
-        this.linkElements
-            .transition().duration(200)
-            .attr("stroke-opacity", 0.4)
-            .attr("stroke", "#4a4a5e")
-            .attr("stroke-width", 1);
-
-        // 3. Broadcast to others (if needed)
-        // We pass 'this' as the context so main.js knows NOT to call highlight back on this chart
-        if (broadcast) {
-            eventBus.call("selectAuthor", this, null);
-        }
+        this.linkLayer.selectAll(".commit-link")
+            .transition().duration(250)
+            .attr("opacity", 0.3)
+            .attr("stroke-width", 2);
     }
 
+    filterByDate(range) {
+        if (!range) return;
+        this.x.domain(range);
+        
+        const width = this.container.clientWidth - this.margin.left - this.margin.right;
+        this.x.range([0, width]);
+
+        // Update link paths
+        const nodeMap = new Map(this.nodes.map(d => [d.hash, d]));
+        this.linkLayer.selectAll(".commit-link")
+            .attr("d", d => {
+                const source = nodeMap.get(d.source);
+                const target = nodeMap.get(d.target);
+                const x0 = this.x(new Date(source.date));
+                const y0 = this.y(source.author);
+                const x1 = this.x(new Date(target.date));
+                const y1 = this.y(target.author);
+                return `M ${x0} ${y0} C ${(x0 + x1) / 2} ${y0}, ${(x0 + x1) / 2} ${y1}, ${x1} ${y1}`;
+            });
+
+        // Update nodes
+        this.nodeLayer.selectAll(".commit-node")
+            .attr("cx", d => this.x(new Date(d.date)))
+            .attr("opacity", d => {
+                const date = new Date(d.date);
+                return (date >= range[0] && date <= range[1]) ? 1 : 0;
+            });
+    }
 
     showTooltip(event, d) {
         this.tooltip.classed("hidden", false)
             .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY - 20) + "px")
             .html(`
-            <strong>${d.author}</strong>
-            <div style="margin-bottom: 5px; font-size: 0.8em; color: #aaa;">${d.hash.substring(0, 7)}</div>
-            <div>${d.msg}</div>
-            <div style="margin-top: 5px; color: #64ffda;">Impact: ${d.impact} LOC</div>
+            <div class="tt-header">
+                <span class="tt-author">${d.author}</span>
+                <span class="tt-hash">${d.hash.substring(0, 7)}</span>
+            </div>
+            <div class="tt-msg">${d.msg}</div>
+            <div class="tt-impact">Δ ${d.impact} lines</div>
         `);
     }
 
